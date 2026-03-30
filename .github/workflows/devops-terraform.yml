@@ -1,0 +1,76 @@
+name: DevOps / Terraform Checks
+
+on:
+  pull_request:
+    paths:
+      - "**/*.tf"
+      - ".github/workflows/**"
+  push:
+    branches: [main, master]
+    paths:
+      - "**/*.tf"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fmt:
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-fmt.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    with:
+      working-directory: "."
+
+  validate:
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-validate.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    needs: [fmt]
+    with:
+      chdir: "infra/stack"
+      validate-all-modules: true
+      modules-dir: "infra/modules"
+
+  lint:
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-lint.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    needs: [fmt]
+    with:
+      lint-path: "."
+
+  trivy-config:
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-security.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    needs: [fmt]
+    with:
+      scan-ref: "."
+
+  tfsec:
+    needs: [fmt]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: "."
+          additional_args: "--minimum-severity HIGH"
+          github_token: ${{ github.token }}
+
+  checkov:
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-checkov.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    needs: [fmt]
+    with:
+      scan-directory: "."
+      framework: "terraform"
+      soft-fail: false
+
+  semgrep:
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-semgrep.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    needs: [fmt]
+    with:
+      working-directory: "."
+      config: "p/terraform"

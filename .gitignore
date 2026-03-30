@@ -1,3 +1,40 @@
+.scannerwork
+
+# Terraform files and directories
+**/.terraform/
+**/.terraform.lock.hcl
+**/terraform.tfstate
+**/terraform.tfstate.*
+**/override.tf
+**/override.tf.json
+**/crash.log
+**/crash.*.log
+
+# Environment-specific
+**/fetched.auto.tfvars.json
+**/tfplan
+**/tfplan.json
+**/tfplan.txt
+**/outputs.json
+
+# IDE
+.idea/
+.vscode/
+.env
+.env.local
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
 # Local .terraform directories
 .terraform/
 
