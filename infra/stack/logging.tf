@@ -26,6 +26,9 @@ resource "aws_kms_alias" "logs" {
 
 data "aws_iam_policy_document" "logs_kms" {
   count = var.enable_log_encryption ? 1 : 0
+  #checkov:skip=CKV_AWS_356:KMS key policies require "*" as resource by AWS design; the policy is attached to the key and scoped to it implicitly.
+  #checkov:skip=CKV_AWS_111:KMS key policies require "*" as resource; write access is constrained by the key policy principal and conditions.
+  #checkov:skip=CKV_AWS_109:KMS key policies require "*" as resource; permissions management is constrained to the specific key by policy attachment.
 
   statement {
     sid       = "Enable IAM User Permissions"
@@ -274,7 +277,7 @@ data "aws_iam_policy_document" "cloudtrail_cw_policy" {
       "logs:CreateLogStream",
       "logs:PutLogEvents",
     ]
-    resources = ["${aws_cloudwatch_log_group.terraform[0].arn}:*"]
+    resources = ["arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:${var.log_group_prefix}/terraform/${var.project_name}/${var.environment}:*"]
   }
 }
 
@@ -309,7 +312,7 @@ resource "aws_cloudtrail" "main" {
   is_multi_region_trail         = true
   enable_log_file_validation    = true
   kms_key_id                    = var.enable_log_encryption ? aws_kms_key.logs[0].arn : null
-  cloud_watch_logs_group_arn    = "${aws_cloudwatch_log_group.terraform[0].arn}:*"
+  cloud_watch_logs_group_arn    = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:${var.log_group_prefix}/terraform/${var.project_name}/${var.environment}:*"
   cloud_watch_logs_role_arn     = aws_iam_role.cloudtrail_cw[0].arn
   sns_topic_name                = aws_sns_topic.cloudtrail[0].name
 

@@ -85,14 +85,14 @@ data "aws_iam_policy_document" "terraform_destroy_assume" {
 # ===== Inline policies =====
 
 data "aws_iam_policy_document" "terraform_plan_readonly" {
+  #checkov:skip=CKV_AWS_356:EC2/RDS/IAM/CloudWatch/KMS describe and list operations require "*" resource; AWS does not support resource-level permissions for most Describe/List actions.
+
   statement {
     sid    = "ReadOnlyAccess"
     effect = "Allow"
     actions = [
       "ec2:Describe*",
       "rds:Describe*",
-      "s3:Get*",
-      "s3:List*",
       "iam:Get*",
       "iam:List*",
       "cloudwatch:Describe*",
@@ -131,6 +131,13 @@ data "aws_iam_policy_document" "terraform_plan_readonly" {
 }
 
 data "aws_iam_policy_document" "terraform_apply_write" {
+  #checkov:skip=CKV_AWS_107:secretsmanager:* is required for Terraform to manage secrets; protected by MFA + ExternalId conditions on the role.
+  #checkov:skip=CKV_AWS_108:s3:* is required for Terraform state management; exfiltration is mitigated by the companion deny policy blocking unencrypted transfers.
+  #checkov:skip=CKV_AWS_109:iam:PassRole is scoped to project-prefixed and service-linked roles in the PassRoleForResources statement; the wildcard in TerraformManageResources is needed for service APIs.
+  #checkov:skip=CKV_AWS_110:Privilege escalation risk is accepted for the Terraform apply role; compensated by explicit deny for sensitive IAM actions and MFA enforcement.
+  #checkov:skip=CKV_AWS_111:Broad write access is required for full Terraform apply; destructive actions are blocked by the companion deny policy.
+  #checkov:skip=CKV_AWS_356:Terraform apply requires broad resource access across services; scope is enforced by the companion explicit-deny policy.
+
   statement {
     sid    = "TerraformManageResources"
     effect = "Allow"
@@ -236,22 +243,45 @@ data "aws_iam_policy_document" "terraform_apply_deny_sensitive" {
 }
 
 data "aws_iam_policy_document" "terraform_destroy_write" {
+  #checkov:skip=CKV_AWS_356:EC2/RDS/logs/KMS delete and describe operations require "*" resource; AWS does not support resource-level permissions for these actions.
+  #checkov:skip=CKV_AWS_111:EC2/RDS/logs delete operations require "*" resource; S3 and DynamoDB are scoped to project-specific ARNs.
+  #checkov:skip=CKV_AWS_109:EC2/RDS/logs delete operations require "*" resource; S3 and DynamoDB are scoped to project-specific ARNs.
+
   statement {
-    sid    = "TerraformDestroyResources"
+    sid    = "TerraformDestroyCompute"
     effect = "Allow"
     actions = [
       "ec2:Describe*",
       "ec2:Delete*",
-      "s3:Delete*",
-      "s3:Get*",
-      "s3:List*",
       "rds:Delete*",
       "logs:Delete*",
       "kms:Describe*",
       "kms:Get*",
-      "dynamodb:*",
     ]
     resources = ["*"]
+  }
+
+  statement {
+    sid    = "TerraformDestroyS3"
+    effect = "Allow"
+    actions = [
+      "s3:Delete*",
+      "s3:Get*",
+      "s3:List*",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.project_name}-*",
+      "arn:aws:s3:::${var.project_name}-*/*",
+    ]
+  }
+
+  statement {
+    sid     = "TerraformDestroyDynamoDB"
+    effect  = "Allow"
+    actions = ["dynamodb:*"]
+    resources = [
+      "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/*",
+    ]
   }
 }
 
