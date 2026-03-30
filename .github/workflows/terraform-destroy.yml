@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   destroy:
-    if: (vars.TERRAFORM_DESTROY_ENABLED || secrets.TERRAFORM_DESTROY_ENABLED || 'true') != 'false'
+    if: vars.TERRAFORM_DESTROY_ENABLED != 'false'
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-destroy.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       environment: ${{ github.event.inputs.environment }}
