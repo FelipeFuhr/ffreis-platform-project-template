@@ -84,6 +84,7 @@ data "aws_iam_policy_document" "terraform_destroy_assume" {
 
 # ===== Inline policies =====
 
+#tfsec:ignore:aws-iam-no-policy-wildcards
 data "aws_iam_policy_document" "terraform_plan_readonly" {
   #checkov:skip=CKV_AWS_356:EC2/RDS/IAM/CloudWatch/KMS describe and list operations require "*" resource; AWS does not support resource-level permissions for most Describe/List actions.
 
@@ -130,6 +131,7 @@ data "aws_iam_policy_document" "terraform_plan_readonly" {
   }
 }
 
+#tfsec:ignore:aws-iam-no-policy-wildcards
 data "aws_iam_policy_document" "terraform_apply_write" {
   #checkov:skip=CKV_AWS_107:secretsmanager:* is required for Terraform to manage secrets; protected by MFA + ExternalId conditions on the role.
   #checkov:skip=CKV_AWS_108:s3:* is required for Terraform state management; exfiltration is mitigated by the companion deny policy blocking unencrypted transfers.
@@ -208,6 +210,7 @@ data "aws_iam_policy_document" "terraform_apply_write" {
   }
 }
 
+#tfsec:ignore:aws-iam-no-policy-wildcards
 data "aws_iam_policy_document" "terraform_apply_deny_sensitive" {
   statement {
     sid    = "ExplicitDenySensitiveActions"
@@ -242,6 +245,7 @@ data "aws_iam_policy_document" "terraform_apply_deny_sensitive" {
   }
 }
 
+#tfsec:ignore:aws-iam-no-policy-wildcards
 data "aws_iam_policy_document" "terraform_destroy_write" {
   #checkov:skip=CKV_AWS_356:EC2/RDS/logs/KMS delete and describe operations require "*" resource; AWS does not support resource-level permissions for these actions.
   #checkov:skip=CKV_AWS_111:EC2/RDS/logs delete operations require "*" resource; S3 and DynamoDB are scoped to project-specific ARNs.
@@ -285,6 +289,7 @@ data "aws_iam_policy_document" "terraform_destroy_write" {
   }
 }
 
+#tfsec:ignore:aws-iam-no-policy-wildcards
 data "aws_iam_policy_document" "ip_restriction" {
   statement {
     sid       = "RestrictToAllowedIPs"

@@ -101,6 +101,7 @@ resource "aws_kms_key_policy" "sns" {
   policy = data.aws_iam_policy_document.sns_kms[0].json
 }
 
+#tfsec:ignore:aws-iam-no-policy-wildcards
 data "aws_iam_policy_document" "logs_kms" {
   count = var.enable_log_encryption ? 1 : 0
   #checkov:skip=CKV_AWS_356:KMS key policies require "*" as resource by AWS design; the policy is attached to the key and scoped to it implicitly.

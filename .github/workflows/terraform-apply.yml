@@ -20,7 +20,7 @@ permissions:
 jobs:
   # Determine which environments need updates based on changed files
   detect-changes:
-    if: vars.TERRAFORM_APPLY_ENABLED != 'false'
+    if: vars.TERRAFORM_APPLY_ENABLED == 'true'
     runs-on: ubuntu-latest
     outputs:
       prod: ${{ steps.changes.outputs.prod }}
@@ -45,7 +45,7 @@ jobs:
 
   apply-staging:
     needs: detect-changes
-    if: vars.TERRAFORM_APPLY_ENABLED != 'false' && needs.detect-changes.outputs.staging == 'true'
+    if: vars.TERRAFORM_APPLY_ENABLED == 'true' && needs.detect-changes.outputs.staging == 'true'
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-apply.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       environment: "staging"
@@ -54,7 +54,7 @@ jobs:
 
   apply-prod:
     needs: [detect-changes, apply-staging]
-    if: vars.TERRAFORM_APPLY_ENABLED != 'false' && needs.detect-changes.outputs.prod == 'true'
+    if: vars.TERRAFORM_APPLY_ENABLED == 'true' && needs.detect-changes.outputs.prod == 'true'
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-apply.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       environment: "prod"
