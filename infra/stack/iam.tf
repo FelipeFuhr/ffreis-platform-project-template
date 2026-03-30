@@ -358,7 +358,7 @@ resource "aws_iam_role_policy" "terraform_apply_deny_sensitive" {
 
 # ===== Terraform Destroy Role (explicit write for destroy operations) =====
 resource "aws_iam_role" "terraform_destroy" {
-  count = var.environment == "dev" ? 1 : 0  # Only allow in dev
+  count = var.environment == "dev" ? 1 : 0 # Only allow in dev
 
   name = "${var.project_name}-${var.environment}-terraform-destroy"
 

@@ -21,16 +21,16 @@ provider "aws" {
     tags = merge(
       var.tags,
       {
-        Project             = var.project_name
-        Environment         = var.environment
-        ManagedBy           = "terraform"
-        Stack               = "platform-project-template"
-        TerraformVersion    = "1.9.8"
-        CreatedAt           = timestamp()
-        CostCenter          = var.cost_center
-        Compliance          = var.compliance_framework
-        DataClassification  = var.data_classification
-        BackupPolicy        = var.backup_policy
+        Project            = var.project_name
+        Environment        = var.environment
+        ManagedBy          = "terraform"
+        Stack              = "platform-project-template"
+        TerraformVersion   = "1.9.8"
+        CreatedAt          = timestamp()
+        CostCenter         = var.cost_center
+        Compliance         = var.compliance_framework
+        DataClassification = var.data_classification
+        BackupPolicy       = var.backup_policy
       }
     )
   }
@@ -41,15 +41,15 @@ locals {
   common_tags = merge(
     var.tags,
     {
-      Project             = var.project_name
-      Environment         = var.environment
-      ManagedBy           = "terraform"
-      Stack               = "platform-project-template"
-      TerraformVersion    = "1.9.8"
-      CostCenter          = var.cost_center
-      Compliance          = var.compliance_framework
-      DataClassification  = var.data_classification
-      BackupPolicy        = var.backup_policy
+      Project            = var.project_name
+      Environment        = var.environment
+      ManagedBy          = "terraform"
+      Stack              = "platform-project-template"
+      TerraformVersion   = "1.9.8"
+      CostCenter         = var.cost_center
+      Compliance         = var.compliance_framework
+      DataClassification = var.data_classification
+      BackupPolicy       = var.backup_policy
     }
   )
 }

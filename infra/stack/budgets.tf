@@ -69,20 +69,20 @@ resource "aws_budgets_budget_action" "threshold_alerts" {
 
   budget_name = try(aws_budgets_budget.monthly[0].name, "")
 
-  action_id                   = "${var.project_name}-alert-${each.value}"
-  action_type                 = "APPLY_IAM_POLICY"
-  approval_model              = "AUTOMATIC"
-  execution_role_arn          = try(aws_iam_role.budget_action[0].arn, "")
-  notification_type           = "FORECASTED"
-  threshold_type              = "PERCENTAGE"
-  threshold_value             = each.value
-  action_threshold_value      = each.value
-  action_threshold_type       = "PERCENTAGE"
+  action_id              = "${var.project_name}-alert-${each.value}"
+  action_type            = "APPLY_IAM_POLICY"
+  approval_model         = "AUTOMATIC"
+  execution_role_arn     = try(aws_iam_role.budget_action[0].arn, "")
+  notification_type      = "FORECASTED"
+  threshold_type         = "PERCENTAGE"
+  threshold_value        = each.value
+  action_threshold_value = each.value
+  action_threshold_type  = "PERCENTAGE"
 
   notification_with_subscribers {
-    account_id     = data.aws_caller_identity.current.account_id
-    type           = "FORECASTED"
-    addresses       = [aws_sns_topic.budget_alerts.arn]
+    account_id = data.aws_caller_identity.current.account_id
+    type       = "FORECASTED"
+    addresses  = [aws_sns_topic.budget_alerts.arn]
   }
 
   lifecycle {

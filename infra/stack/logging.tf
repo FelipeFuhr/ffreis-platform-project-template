@@ -392,10 +392,10 @@ resource "aws_cloudwatch_log_group" "terraform" {
 resource "aws_flow_log_permission" "cloudwatch" {
   count = var.enable_logging ? 1 : 0
 
-  principal       = "vpc-flow-logs.amazonaws.com"
-  action          = "logs:PutSubscriptionFilter"
-  statement_id    = "${var.project_name}-vpc-flow-logs"
-  log_group_name  = aws_cloudwatch_log_group.platform[0].name
+  principal      = "vpc-flow-logs.amazonaws.com"
+  action         = "logs:PutSubscriptionFilter"
+  statement_id   = "${var.project_name}-vpc-flow-logs"
+  log_group_name = aws_cloudwatch_log_group.platform[0].name
 }
 
 # CloudWatch Alarm for unusual log volume (anomaly detection)
