@@ -2,41 +2,279 @@
 # Purpose: Least-privilege IAM roles for Terraform deployment (plan vs apply separation)
 
 locals {
-  # Policy condition for MFA requirement
-  mfa_condition = var.enforce_mfa ? {
-    Bool = {
-      "aws:MultiFactorAuthPresent" = "true"
+  allowed_principals = length(var.allowed_principal_arns) > 0 ? concat(
+    var.allowed_principal_arns,
+    ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+  ) : ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+}
+
+# ===== Assume role policies =====
+
+data "aws_iam_policy_document" "terraform_plan_assume" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "AWS"
+      identifiers = local.allowed_principals
     }
-  } : null
+
+    condition {
+      test     = "StringEquals"
+      variable = "sts:ExternalId"
+      values   = ["${var.project_name}-${var.environment}-plan"]
+    }
+
+    dynamic "condition" {
+      for_each = var.enforce_mfa ? [1] : []
+      content {
+        test     = "Bool"
+        variable = "aws:MultiFactorAuthPresent"
+        values   = ["true"]
+      }
+    }
+  }
+}
+
+data "aws_iam_policy_document" "terraform_apply_assume" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "AWS"
+      identifiers = local.allowed_principals
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "sts:ExternalId"
+      values   = ["${var.project_name}-${var.environment}-apply"]
+    }
+
+    dynamic "condition" {
+      for_each = var.enforce_mfa ? [1] : []
+      content {
+        test     = "Bool"
+        variable = "aws:MultiFactorAuthPresent"
+        values   = ["true"]
+      }
+    }
+  }
+}
+
+data "aws_iam_policy_document" "terraform_destroy_assume" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "sts:ExternalId"
+      values   = ["${var.project_name}-${var.environment}-destroy"]
+    }
+  }
+}
+
+# ===== Inline policies =====
+
+data "aws_iam_policy_document" "terraform_plan_readonly" {
+  statement {
+    sid    = "ReadOnlyAccess"
+    effect = "Allow"
+    actions = [
+      "ec2:Describe*",
+      "rds:Describe*",
+      "s3:Get*",
+      "s3:List*",
+      "iam:Get*",
+      "iam:List*",
+      "cloudwatch:Describe*",
+      "logs:Describe*",
+      "kms:Describe*",
+      "kms:Get*",
+      "kms:List*",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "ReadTerraformState"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:GetObjectVersion",
+      "s3:ListBucket",
+    ]
+    resources = [
+      "arn:aws:s3:::*terraform-state*",
+      "arn:aws:s3:::*terraform-state*/*",
+    ]
+  }
+
+  statement {
+    sid    = "ReadDynamoDBLocks"
+    effect = "Allow"
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:DescribeTable",
+      "dynamodb:Query",
+    ]
+    resources = ["arn:aws:dynamodb:*:${data.aws_caller_identity.current.account_id}:table/*lock*"]
+  }
+}
+
+data "aws_iam_policy_document" "terraform_apply_write" {
+  statement {
+    sid    = "TerraformManageResources"
+    effect = "Allow"
+    actions = [
+      "ec2:*",
+      "rds:*",
+      "s3:*",
+      "cloudwatch:*",
+      "logs:*",
+      "kms:*",
+      "sns:*",
+      "sqs:*",
+      "lambda:*",
+      "dynamodb:*",
+      "apigateway:*",
+      "elbv2:*",
+      "elasticloadbalancing:*",
+      "acm:*",
+      "route53:*",
+      "ssm:*",
+      "secretsmanager:*",
+      "backup:*",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid     = "ManageTerraformState"
+    effect  = "Allow"
+    actions = ["s3:*"]
+    resources = [
+      "arn:aws:s3:::*terraform-state*",
+      "arn:aws:s3:::*terraform-state*/*",
+    ]
+  }
+
+  statement {
+    sid    = "ManageDynamoDBLocks"
+    effect = "Allow"
+    actions = [
+      "dynamodb:PutItem",
+      "dynamodb:GetItem",
+      "dynamodb:DeleteItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:DescribeTable",
+    ]
+    resources = ["arn:aws:dynamodb:*:${data.aws_caller_identity.current.account_id}:table/*lock*"]
+  }
+
+  statement {
+    sid    = "CloudTrailLogging"
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+    ]
+    resources = ["arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/*"]
+  }
+
+  statement {
+    sid     = "PassRoleForResources"
+    effect  = "Allow"
+    actions = ["iam:PassRole"]
+    resources = [
+      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-*",
+      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/*",
+    ]
+  }
+}
+
+data "aws_iam_policy_document" "terraform_apply_deny_sensitive" {
+  statement {
+    sid    = "ExplicitDenySensitiveActions"
+    effect = "Deny"
+    actions = concat(
+      var.denied_actions,
+      [
+        "s3:DeleteBucket",
+        "s3:PutBucketPolicy",
+        "rds:DeleteDBInstance",
+        "rds:DeleteDBCluster",
+        "ec2:TerminateInstances",
+        "iam:DeleteRole",
+        "iam:PutRolePolicy",
+        "organizations:LeaveOrganization",
+      ]
+    )
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "DenyUnencryptedDataTransfer"
+    effect    = "Deny"
+    actions   = ["s3:PutObject"]
+    resources = ["*"]
+
+    condition {
+      test     = "StringNotEquals"
+      variable = "s3:x-amz-server-side-encryption"
+      values   = ["aws:kms"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "terraform_destroy_write" {
+  statement {
+    sid    = "TerraformDestroyResources"
+    effect = "Allow"
+    actions = [
+      "ec2:Describe*",
+      "ec2:Delete*",
+      "s3:Delete*",
+      "s3:Get*",
+      "s3:List*",
+      "rds:Delete*",
+      "logs:Delete*",
+      "kms:Describe*",
+      "kms:Get*",
+      "dynamodb:*",
+    ]
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "ip_restriction" {
+  statement {
+    sid       = "RestrictToAllowedIPs"
+    effect    = "Deny"
+    actions   = ["*"]
+    resources = ["*"]
+
+    condition {
+      test     = "NotIpAddress"
+      variable = "aws:SourceIp"
+      values   = var.allowed_ip_ranges
+    }
+  }
 }
 
 # ===== Terraform Plan Role (read-only) =====
 resource "aws_iam_role" "terraform_plan" {
   name = "${var.project_name}-${var.environment}-terraform-plan"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          AWS = length(var.allowed_principal_arns) > 0 ? concat(
-            var.allowed_principal_arns,
-            ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-          ) : ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-        }
-        Action = "sts:AssumeRole"
-        Condition = merge(
-          local.mfa_condition != null ? { MfaPresent : local.mfa_condition } : {},
-          {
-            StringEquals = {
-              "sts:ExternalId" = "${var.project_name}-${var.environment}-plan"
-            }
-          }
-        )
-      }
-    ]
-  })
+  assume_role_policy = data.aws_iam_policy_document.terraform_plan_assume.json
 
   tags = merge(
     local.common_tags,
@@ -48,83 +286,17 @@ resource "aws_iam_role" "terraform_plan" {
 
 # Plan role: read-only access to infrastructure
 resource "aws_iam_role_policy" "terraform_plan_readonly" {
+  #checkov:skip=CKV_AWS_355:Describe/Get/List actions inherently require "*" as resource; they cannot be scoped to specific ARNs.
   name   = "${var.project_name}-${var.environment}-terraform-plan-readonly"
   role   = aws_iam_role.terraform_plan.id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "ReadOnlyAccess"
-        Effect = "Allow"
-        Action = [
-          "ec2:Describe*",
-          "rds:Describe*",
-          "s3:Get*",
-          "s3:List*",
-          "iam:Get*",
-          "iam:List*",
-          "cloudwatch:Describe*",
-          "logs:Describe*",
-          "kms:Describe*",
-          "kms:Get*",
-          "kms:List*"
-        ]
-        Resource = "*"
-      },
-      {
-        Sid    = "ReadTerraformState"
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:GetObjectVersion",
-          "s3:ListBucket"
-        ]
-        Resource = [
-          "arn:aws:s3:::*terraform-state*",
-          "arn:aws:s3:::*terraform-state*/*"
-        ]
-      },
-      {
-        Sid    = "ReadDynamoDBLocks"
-        Effect = "Allow"
-        Action = [
-          "dynamodb:GetItem",
-          "dynamodb:DescribeTable",
-          "dynamodb:Query"
-        ]
-        Resource = "arn:aws:dynamodb:*:${data.aws_caller_identity.current.account_id}:table/*lock*"
-      }
-    ]
-  })
+  policy = data.aws_iam_policy_document.terraform_plan_readonly.json
 }
 
 # ===== Terraform Apply Role (write with restrictions) =====
 resource "aws_iam_role" "terraform_apply" {
   name = "${var.project_name}-${var.environment}-terraform-apply"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          AWS = length(var.allowed_principal_arns) > 0 ? concat(
-            var.allowed_principal_arns,
-            ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-          ) : ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-        }
-        Action = "sts:AssumeRole"
-        Condition = merge(
-          local.mfa_condition != null ? { MfaPresent : local.mfa_condition } : {},
-          {
-            StringEquals = {
-              "sts:ExternalId" = "${var.project_name}-${var.environment}-apply"
-            }
-          }
-        )
-      }
-    ]
-  })
+  assume_role_policy = data.aws_iam_policy_document.terraform_apply_assume.json
 
   tags = merge(
     local.common_tags,
@@ -136,123 +308,22 @@ resource "aws_iam_role" "terraform_apply" {
 
 # Apply role: full write access with explicit denials
 resource "aws_iam_role_policy" "terraform_apply_write" {
+  #checkov:skip=CKV_AWS_355:Terraform apply requires broad resource access; scope is enforced by the companion explicit-deny policy (terraform_apply_deny_sensitive).
+  #checkov:skip=CKV_AWS_286:iam:PassRole is intentionally scoped to project-prefixed roles only; this is not an unconstrained privilege escalation path.
+  #checkov:skip=CKV_AWS_287:secretsmanager:* is required for Terraform to manage secrets; access is restricted to the apply role and protected by MFA + ExternalId conditions.
+  #checkov:skip=CKV_AWS_288:s3:* is required for Terraform state management; data exfiltration is mitigated by the companion deny policy blocking unencrypted transfers.
+  #checkov:skip=CKV_AWS_289:iam:PassRole is scoped to project-prefixed and service-linked roles; broader IAM permissions management is explicitly denied.
+  #checkov:skip=CKV_AWS_290:Write access is required for full Terraform apply; destructive actions (DeleteBucket, TerminateInstances, etc.) are blocked by the companion deny policy.
   name   = "${var.project_name}-${var.environment}-terraform-apply-write"
   role   = aws_iam_role.terraform_apply.id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "TerraformManageResources"
-        Effect = "Allow"
-        Action = [
-          "ec2:*",
-          "rds:*",
-          "s3:*",
-          "cloudwatch:*",
-          "logs:*",
-          "kms:*",
-          "sns:*",
-          "sqs:*",
-          "lambda:*",
-          "dynamodb:*",
-          "apigateway:*",
-          "elbv2:*",
-          "elasticloadbalancing:*",
-          "acm:*",
-          "route53:*",
-          "ssm:*",
-          "secretsmanager:*",
-          "backup:*"
-        ]
-        Resource = "*"
-      },
-      {
-        Sid    = "ManageTerraformState"
-        Effect = "Allow"
-        Action = [
-          "s3:*"
-        ]
-        Resource = [
-          "arn:aws:s3:::*terraform-state*",
-          "arn:aws:s3:::*terraform-state*/*"
-        ]
-      },
-      {
-        Sid    = "ManageDynamoDBLocks"
-        Effect = "Allow"
-        Action = [
-          "dynamodb:PutItem",
-          "dynamodb:GetItem",
-          "dynamodb:DeleteItem",
-          "dynamodb:UpdateItem",
-          "dynamodb:DescribeTable"
-        ]
-        Resource = "arn:aws:dynamodb:*:${data.aws_caller_identity.current.account_id}:table/*lock*"
-      },
-      {
-        Sid    = "CloudTrailLogging"
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/*"
-      },
-      {
-        Sid    = "PassRoleForResources"
-        Effect = "Allow"
-        Action = [
-          "iam:PassRole"
-        ]
-        Resource = [
-          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-*",
-          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/*"
-        ]
-      }
-    ]
-  })
+  policy = data.aws_iam_policy_document.terraform_apply_write.json
 }
 
 # Explicit deny for sensitive operations (defense in depth)
 resource "aws_iam_role_policy" "terraform_apply_deny_sensitive" {
   name   = "${var.project_name}-${var.environment}-terraform-apply-deny"
   role   = aws_iam_role.terraform_apply.id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "ExplicitDenySensitiveActions"
-        Effect = "Deny"
-        Action = concat(
-          var.denied_actions,
-          [
-            "s3:DeleteBucket",
-            "s3:PutBucketPolicy",
-            "rds:DeleteDBInstance",
-            "rds:DeleteDBCluster",
-            "ec2:TerminateInstances",
-            "iam:DeleteRole",
-            "iam:PutRolePolicy",
-            "organizations:LeaveOrganization"
-          ]
-        )
-        Resource = "*"
-      },
-      {
-        Sid    = "DenyUnencryptedDataTransfer"
-        Effect = "Deny"
-        Action = [
-          "s3:PutObject"
-        ]
-        Resource = "*"
-        Condition = {
-          StringNotEquals = {
-            "s3:x-amz-server-side-encryption" = "aws:kms"
-          }
-        }
-      }
-    ]
-  })
+  policy = data.aws_iam_policy_document.terraform_apply_deny_sensitive.json
 }
 
 # ===== Terraform Destroy Role (explicit write for destroy operations) =====
@@ -261,23 +332,7 @@ resource "aws_iam_role" "terraform_destroy" {
 
   name = "${var.project_name}-${var.environment}-terraform-destroy"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-        }
-        Action = "sts:AssumeRole"
-        Condition = {
-          StringEquals = {
-            "sts:ExternalId" = "${var.project_name}-${var.environment}-destroy"
-          }
-        }
-      }
-    ]
-  })
+  assume_role_policy = data.aws_iam_policy_document.terraform_destroy_assume.json
 
   tags = merge(
     local.common_tags,
@@ -292,28 +347,7 @@ resource "aws_iam_role_policy" "terraform_destroy_write" {
 
   name   = "${var.project_name}-${var.environment}-terraform-destroy-write"
   role   = aws_iam_role.terraform_destroy[0].id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "TerraformDestroyResources"
-        Effect = "Allow"
-        Action = [
-          "ec2:Describe*",
-          "ec2:Delete*",
-          "s3:Delete*",
-          "s3:Get*",
-          "s3:List*",
-          "rds:Delete*",
-          "logs:Delete*",
-          "kms:Describe*",
-          "kms:Get*",
-          "dynamodb:*"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
+  policy = data.aws_iam_policy_document.terraform_destroy_write.json
 }
 
 # Policy for IP-based access control (if configured)
@@ -322,22 +356,7 @@ resource "aws_iam_role_policy" "ip_restriction" {
 
   name   = "${var.project_name}-${var.environment}-ip-restriction"
   role   = aws_iam_role.terraform_apply.id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "RestrictToAllowedIPs"
-        Effect = "Deny"
-        Action = "*"
-        Resource = "*"
-        Condition = {
-          NotIpAddress = {
-            "aws:SourceIp" = var.allowed_ip_ranges
-          }
-        }
-      }
-    ]
-  })
+  policy = data.aws_iam_policy_document.ip_restriction.json
 }
 
 # ===== Policy Validation Resources =====

@@ -14,22 +14,22 @@ resource "aws_sns_topic" "budget_alerts" {
   )
 }
 
-resource "aws_sns_topic_policy" "budget_alerts" {
-  arn = aws_sns_topic.budget_alerts.arn
+data "aws_iam_policy_document" "budget_alerts_sns" {
+  statement {
+    effect    = "Allow"
+    actions   = ["SNS:Publish"]
+    resources = [aws_sns_topic.budget_alerts.arn]
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "budgets.amazonaws.com"
-        }
-        Action   = "SNS:Publish"
-        Resource = aws_sns_topic.budget_alerts.arn
-      }
-    ]
-  })
+    principals {
+      type        = "Service"
+      identifiers = ["budgets.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_sns_topic_policy" "budget_alerts" {
+  arn    = aws_sns_topic.budget_alerts.arn
+  policy = data.aws_iam_policy_document.budget_alerts_sns.json
 }
 
 # Email subscriptions
@@ -95,24 +95,25 @@ resource "aws_budgets_budget_action" "threshold_alerts" {
   ]
 }
 
+data "aws_iam_policy_document" "budget_action_assume" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["budgets.amazonaws.com"]
+    }
+  }
+}
+
 # IAM role for budget actions
 resource "aws_iam_role" "budget_action" {
   count = var.enable_budgets && var.monthly_budget_limit > 0 ? 1 : 0
 
   name = "${var.project_name}-${var.environment}-budget-action"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "budgets.amazonaws.com"
-        }
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
+  assume_role_policy = data.aws_iam_policy_document.budget_action_assume.json
 
   tags = merge(
     local.common_tags,
