@@ -18,6 +18,6 @@ permissions:
 
 jobs:
   checkov:
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-checkov.yml@main
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-checkov.yml@v1.0.0
     with:
       scan-directory: "infra/"

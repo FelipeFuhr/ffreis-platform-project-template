@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/gruntwork-io/terratest/modules/random"
+	test_structure "github.com/gruntwork-io/terratest/modules/test-structure"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -50,7 +51,7 @@ func TestProjectStackIAMRoles(t *testing.T) {
 	callerARN := *callerID.Arn
 
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
-		TerraformDir: "../infra/stack",
+		TerraformDir: test_structure.CopyTerraformFolderToTemp(t, "..", "infra/stack"),
 		BackendConfig: testBackendConfig(t, uniqueID),
 		Vars: map[string]interface{}{
 			"project_name":           projectName,
@@ -122,7 +123,7 @@ func TestProjectStackIAMRoles(t *testing.T) {
 
 	applyOut, err := iamClient.GetRole(ctx, &iam.GetRoleInput{RoleName: &applyRoleName})
 	require.NoError(t, err, "get apply role %s", applyRoleName)
-	assert.Equal(t, applyRoleName, *applyOut.Role.Name)
+	assert.Equal(t, applyRoleName, *applyOut.Role.RoleName)
 }
 
 // TestProjectStackLogging deploys the project-template stack in the dev environment
@@ -151,7 +152,7 @@ func TestProjectStackLogging(t *testing.T) {
 	require.NoError(t, err, "get caller identity")
 
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
-		TerraformDir: "../infra/stack",
+		TerraformDir: test_structure.CopyTerraformFolderToTemp(t, "..", "infra/stack"),
 		BackendConfig: testBackendConfig(t, uniqueID),
 		Vars: map[string]interface{}{
 			"project_name":           projectName,

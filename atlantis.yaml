@@ -56,11 +56,11 @@ workflows:
               --output ./envs/$WORKSPACE/fetched.auto.tfvars.json
         - init:
             extra_args:
-              - -backend-config=./envs/${{ .Workspace }}/backend.hcl
+              - -backend-config=./envs/{{.Workspace}}/backend.hcl
               - -reconfigure
         - plan:
             extra_args:
-              - -var-file=./envs/${{ .Workspace }}/terraform.tfvars
+              - -var-file=./envs/{{.Workspace}}/terraform.tfvars
     apply:
       steps:
         # Re-fetch before apply to ensure config is current.

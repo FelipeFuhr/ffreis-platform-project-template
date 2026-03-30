@@ -37,41 +37,41 @@ jobs:
       contents: read
       actions: read
       security-events: write
-    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-gitleaks.yml@main
+    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-gitleaks.yml@v1.0.0
     with:
       working-directory: "."
       scan-history: true
       upload-sarif: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
 
   fmt:
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-fmt.yml@main
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-fmt.yml@v1.0.0
     with:
       working-directory: "."
 
   # ── 3. Validate ─────────────────────────────────────────────────────────────
   validate:
     needs: [fmt]
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-validate.yml@main
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-validate.yml@v1.0.0
     with:
       chdir: "infra/stack"
 
   # ── 4. Lint ─────────────────────────────────────────────────────────────────
   lint:
     needs: [fmt]
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-lint.yml@main
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-lint.yml@v1.0.0
     with:
       lint-path: "infra/"
 
   # ── 5. Security (Trivy) ──────────────────────────────────────────────────────
   security:
     needs: [fmt]
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-security.yml@main
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-security.yml@v1.0.0
     with:
       scan-ref: "infra/"
 
   # ── 6. Security (tfsec) ──────────────────────────────────────────────────────
   tfsec:
     needs: [fmt]
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-tfsec.yml@main
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-tfsec.yml@v1.0.0
     with:
       scan-path: "infra/"

@@ -173,9 +173,9 @@ make lock-cleanup ENV=prod   # Remove stale locks (manual confirmation)
 Or use the utility script:
 
 ```bash
-ENVIRONMENT=prod bash scripts/manage-locks.sh list
-ENVIRONMENT=prod bash scripts/manage-locks.sh info
-ENVIRONMENT=prod bash scripts/manage-locks.sh cleanup
+bash scripts/manage-locks.sh list prod
+bash scripts/manage-locks.sh info prod
+bash scripts/manage-locks.sh cleanup prod
 ```
 
 ### GitHub Actions Workflows
@@ -334,7 +334,7 @@ Create separate roles for different workflows:
     ],
     "denied": [
       "iam:*",
-      "organizationss:*",
+      "organizations:*",
       "ec2:TerminateInstances"
     ]
   },

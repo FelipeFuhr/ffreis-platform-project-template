@@ -3,7 +3,7 @@
 
 locals {
   allowed_principals = length(var.allowed_principal_arns) > 0 ? concat(
-    var.allowed_principal_arns,
+    tolist(var.allowed_principal_arns),
     ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
   ) : ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
 }
@@ -213,7 +213,7 @@ data "aws_iam_policy_document" "terraform_apply_deny_sensitive" {
     sid    = "ExplicitDenySensitiveActions"
     effect = "Deny"
     actions = concat(
-      var.denied_actions,
+      tolist(var.denied_actions),
       [
         "s3:DeleteBucket",
         "s3:PutBucketPolicy",

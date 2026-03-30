@@ -33,10 +33,11 @@ jobs:
       - name: Detect changed environments
         id: changes
         run: |
-          git diff --name-only HEAD~1 HEAD | grep -q "^envs/prod/" && echo "prod=true" >> "$GITHUB_OUTPUT" || echo "prod=false" >> "$GITHUB_OUTPUT"
-          git diff --name-only HEAD~1 HEAD | grep -q "^envs/staging/" && echo "staging=true" >> "$GITHUB_OUTPUT" || echo "staging=false" >> "$GITHUB_OUTPUT"
+          diff_range="${{ github.event.before }}..${{ github.sha }}"
+          git diff --name-only "$diff_range" | grep -q "^envs/prod/" && echo "prod=true" >> "$GITHUB_OUTPUT" || echo "prod=false" >> "$GITHUB_OUTPUT"
+          git diff --name-only "$diff_range" | grep -q "^envs/staging/" && echo "staging=true" >> "$GITHUB_OUTPUT" || echo "staging=false" >> "$GITHUB_OUTPUT"
           # Also deploy if shared infra changed
-          git diff --name-only HEAD~1 HEAD | grep -q "^infra/stack/" && {
+          git diff --name-only "$diff_range" | grep -q "^infra/stack/" && {
             echo "prod=true" >> "$GITHUB_OUTPUT"
             echo "staging=true" >> "$GITHUB_OUTPUT"
           }
@@ -44,7 +45,7 @@ jobs:
   apply-staging:
     needs: detect-changes
     if: needs.detect-changes.outputs.staging == 'true'
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-apply.yml@main
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-apply.yml@v1.0.0
     with:
       environment: "staging"
       chdir: "infra/stack"
@@ -53,7 +54,7 @@ jobs:
   apply-prod:
     needs: [detect-changes, apply-staging]
     if: needs.detect-changes.outputs.prod == 'true'
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-apply.yml@main
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-apply.yml@v1.0.0
     with:
       environment: "prod"
       chdir: "infra/stack"

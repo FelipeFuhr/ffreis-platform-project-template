@@ -327,7 +327,7 @@ resource "aws_cloudtrail" "main" {
 
     data_resource {
       type   = "AWS::S3::Object"
-      values = ["arn:aws:s3:::*"]
+      values = ["${aws_s3_bucket.cloudtrail_logs[0].arn}/"]
     }
 
     data_resource {
@@ -388,14 +388,37 @@ resource "aws_cloudwatch_log_group" "terraform" {
   )
 }
 
-# VPC Flow Logs (requires VPC to be defined elsewhere)
-resource "aws_flow_log_permission" "cloudwatch" {
+# Allow VPC Flow Logs service to write to the platform CloudWatch Log Group
+data "aws_iam_policy_document" "vpc_flow_logs_to_cloudwatch" {
   count = var.enable_logging ? 1 : 0
 
-  principal      = "vpc-flow-logs.amazonaws.com"
-  action         = "logs:PutSubscriptionFilter"
-  statement_id   = "${var.project_name}-vpc-flow-logs"
-  log_group_name = aws_cloudwatch_log_group.platform[0].name
+  statement {
+    sid    = "${var.project_name}-vpc-flow-logs"
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["vpc-flow-logs.amazonaws.com"]
+    }
+
+    actions = [
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+      "logs:DescribeLogGroups",
+      "logs:DescribeLogStreams",
+    ]
+
+    resources = [
+      aws_cloudwatch_log_group.platform[0].arn,
+    ]
+  }
+}
+
+resource "aws_cloudwatch_log_resource_policy" "vpc_flow_logs" {
+  count = var.enable_logging ? 1 : 0
+
+  policy_name     = "${var.project_name}-${var.environment}-vpc-flow-logs"
+  policy_document = data.aws_iam_policy_document.vpc_flow_logs_to_cloudwatch[0].json
 }
 
 # CloudWatch Alarm for unusual log volume (anomaly detection)
