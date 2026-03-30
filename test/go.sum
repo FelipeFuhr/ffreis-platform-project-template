@@ -1,0 +1,7 @@
+github.com/aws/aws-sdk-go-v2/config v1.27.9/go.mod h1:dK1FQfpwpql83kbD873E9vz4FyAxuJtR22wzoXn3qq0=
+github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.35.0/go.mod h1:bIFyamdY1PRTmifPT7uHCq4+af0SooBn9hmK9UW/hmg=
+github.com/aws/aws-sdk-go-v2/service/iam v1.31.3/go.mod h1:+nAQlxsBxPFf6GrL93lvCuv5PxSTX3GO0RYrURyzl/Q=
+github.com/aws/aws-sdk-go-v2/service/s3 v1.53.1/go.mod h1:qmdkIIAC+GCLASF7R2whgNrJADz0QZPX+Seiw/i4S3o=
+github.com/aws/aws-sdk-go-v2/service/sts v1.28.6/go.mod h1:FZf1/nKNEkHdGGJP/cI2MoIMquumuRK6ol3QQJNDxmw=
+github.com/gruntwork-io/terratest v0.46.16/go.mod h1:oywHw1cFKXSYvKPm27U7quZVzDUlA22H2xUrKCe26xM=
+github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
