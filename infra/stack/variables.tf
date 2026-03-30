@@ -200,12 +200,6 @@ variable "enable_encryption_validation" {
   default     = true
 }
 
-variable "kms_key_rotation_enabled" {
-  description = "Enable automatic KMS key rotation"
-  type        = bool
-  default     = true
-}
-
 variable "require_https_only" {
   description = "Enforce HTTPS for all API calls"
   type        = bool

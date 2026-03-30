@@ -8,7 +8,7 @@ resource "aws_kms_key" "logs" {
 
   description             = "KMS key for CloudWatch Logs encryption - ${var.project_name}-${var.environment}"
   deletion_window_in_days = 10
-  enable_key_rotation     = var.kms_key_rotation_enabled
+  enable_key_rotation     = true
 
   tags = merge(
     local.common_tags,
@@ -30,7 +30,7 @@ resource "aws_kms_key" "sns" {
 
   description             = "KMS key for SNS encryption - ${var.project_name}-${var.environment}"
   deletion_window_in_days = 10
-  enable_key_rotation     = var.kms_key_rotation_enabled
+  enable_key_rotation     = true
 
   tags = merge(
     local.common_tags,
@@ -383,7 +383,7 @@ data "aws_iam_policy_document" "cloudtrail_cw_policy" {
       "logs:CreateLogStream",
       "logs:PutLogEvents",
     ]
-    resources = ["${aws_cloudwatch_log_group.terraform[0].arn}:*"]
+    resources = ["${aws_cloudwatch_log_group.terraform[0].arn}:log-stream:*"]
   }
 }
 

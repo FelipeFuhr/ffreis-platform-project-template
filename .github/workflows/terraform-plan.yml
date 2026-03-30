@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   plan-dev:
-    if: vars.TERRAFORM_PLAN_ENABLED != 'false'
+    if: (vars.TERRAFORM_PLAN_ENABLED || secrets.TERRAFORM_PLAN_ENABLED || 'true') != 'false'
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-plan.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       environment: "dev"
@@ -27,7 +27,7 @@ jobs:
     secrets: inherit
 
   plan-staging:
-    if: vars.TERRAFORM_PLAN_ENABLED != 'false'
+    if: (vars.TERRAFORM_PLAN_ENABLED || secrets.TERRAFORM_PLAN_ENABLED || 'true') != 'false'
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-plan.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       environment: "staging"
@@ -35,7 +35,7 @@ jobs:
     secrets: inherit
 
   plan-prod:
-    if: vars.TERRAFORM_PLAN_ENABLED != 'false'
+    if: (vars.TERRAFORM_PLAN_ENABLED || secrets.TERRAFORM_PLAN_ENABLED || 'true') != 'false'
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-plan.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       environment: "prod"
