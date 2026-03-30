@@ -17,7 +17,7 @@ resource "aws_sns_topic" "budget_alerts" {
 data "aws_iam_policy_document" "budget_alerts_sns" {
   statement {
     effect    = "Allow"
-    actions   = ["SNS:Publish"]
+    actions   = ["sns:Publish"]
     resources = [aws_sns_topic.budget_alerts.arn]
 
     principals {
@@ -46,10 +46,10 @@ resource "aws_budgets_budget" "monthly" {
   count = var.enable_budgets && var.monthly_budget_limit > 0 ? 1 : 0
 
   name              = "${var.project_name}-${var.environment}-monthly"
-  budget_type       = "MONTHLY"
-  limit_type        = "FORECASTED"
+  budget_type       = "COST"
+  time_unit         = "MONTHLY"
   limit_unit        = "USD"
-  limited_amount    = var.monthly_budget_limit
+  limit_amount      = var.monthly_budget_limit
   time_period_start = "2024-01-01_00:00"
   time_period_end   = "2087-12-31_23:59"
 

@@ -26,7 +26,6 @@ provider "aws" {
         ManagedBy          = "terraform"
         Stack              = "platform-project-template"
         TerraformVersion   = "1.9.8"
-        CreatedAt          = timestamp()
         CostCenter         = var.cost_center
         Compliance         = var.compliance_framework
         DataClassification = var.data_classification

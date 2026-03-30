@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
 const (
@@ -64,15 +65,21 @@ func testTags() map[string]interface{} {
 func skipIfNoCredentials(t *testing.T) {
 	t.Helper()
 
+	// Require an explicit test role to prevent accidental use of production credentials.
+	if os.Getenv("AWS_TEST_ROLE_ARN") == "" && os.Getenv("AWS_ACCESS_KEY_ID") == "" {
+		t.Skip("skipping: set AWS_TEST_ROLE_ARN or AWS_ACCESS_KEY_ID to run integration tests")
+	}
+
 	ctx := context.Background()
-	_, err := config.LoadDefaultConfig(ctx, config.WithRegion(testRegion()))
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(testRegion()))
 	if err != nil {
 		t.Skipf("skipping: AWS credentials not configured: %v", err)
 	}
 
-	// Require an explicit test role to prevent accidental use of production credentials.
-	if os.Getenv("AWS_TEST_ROLE_ARN") == "" && os.Getenv("AWS_ACCESS_KEY_ID") == "" {
-		t.Skip("skipping: set AWS_TEST_ROLE_ARN or AWS_ACCESS_KEY_ID to run integration tests")
+	// Validate that the credentials are actually usable by calling STS.
+	stsClient := sts.NewFromConfig(cfg)
+	if _, err := stsClient.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{}); err != nil {
+		t.Skipf("skipping: AWS credentials not valid: %v", err)
 	}
 }
 
