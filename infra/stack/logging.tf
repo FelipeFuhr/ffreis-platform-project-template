@@ -383,7 +383,7 @@ data "aws_iam_policy_document" "cloudtrail_cw_policy" {
       "logs:CreateLogStream",
       "logs:PutLogEvents",
     ]
-    resources = ["arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:${var.log_group_prefix}/terraform/${var.project_name}/${var.environment}:*"]
+    resources = ["${aws_cloudwatch_log_group.terraform[0].arn}:*"]
   }
 }
 
@@ -418,13 +418,14 @@ resource "aws_cloudtrail" "main" {
   is_multi_region_trail         = true
   enable_log_file_validation    = true
   kms_key_id                    = var.enable_log_encryption ? aws_kms_key.logs[0].arn : null
-  cloud_watch_logs_group_arn    = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:${var.log_group_prefix}/terraform/${var.project_name}/${var.environment}:*"
+  cloud_watch_logs_group_arn    = "${aws_cloudwatch_log_group.terraform[0].arn}:*"
   cloud_watch_logs_role_arn     = aws_iam_role.cloudtrail_cw[0].arn
   sns_topic_name                = aws_sns_topic.cloudtrail[0].name
 
   depends_on = [
     aws_s3_bucket_policy.cloudtrail_logs[0],
     aws_iam_role_policy.cloudtrail_cw[0],
+    aws_cloudwatch_log_group.terraform[0],
   ]
 
   event_selector {
