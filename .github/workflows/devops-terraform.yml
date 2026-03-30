@@ -57,8 +57,6 @@ jobs:
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
           working_directory: "."
-          format: "compact"
-          soft_fail: false
           additional_args: "--minimum-severity HIGH"
           github_token: ${{ github.token }}
 
