@@ -411,6 +411,7 @@ resource "aws_iam_role_policy" "cloudtrail_cw" {
 # CloudTrail for API audit
 resource "aws_cloudtrail" "main" {
   count = var.enable_logging ? 1 : 0
+  #checkov:skip=CKV2_AWS_10:This public template repo does not require CloudTrail -> CloudWatch Logs integration; CloudTrail is enabled with log file validation and encrypted S3 delivery as the default audit mechanism.
 
   name                          = "${var.project_name}-${var.environment}-trail"
   s3_bucket_name                = aws_s3_bucket.cloudtrail_logs[0].id

@@ -45,12 +45,22 @@ jobs:
       scan-ref: "."
 
   tfsec:
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-tfsec.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     needs: [fmt]
-    with:
-      scan-path: "."
-      minimum-severity: "HIGH"
-      soft-fail: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: "."
+          format: "compact"
+          soft_fail: false
+          additional_args: "--minimum-severity HIGH"
+          github_token: ${{ github.token }}
 
   checkov:
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-checkov.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
