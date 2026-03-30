@@ -19,21 +19,21 @@ permissions:
 
 jobs:
   plan-dev:
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-plan.yml@v1.0.0
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-plan.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       environment: "dev"
       chdir: "infra/stack"
     secrets: inherit
 
   plan-staging:
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-plan.yml@v1.0.0
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-plan.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       environment: "staging"
       chdir: "infra/stack"
     secrets: inherit
 
   plan-prod:
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-plan.yml@v1.0.0
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-plan.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       environment: "prod"
       chdir: "infra/stack"

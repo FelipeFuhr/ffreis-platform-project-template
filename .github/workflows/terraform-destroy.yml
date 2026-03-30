@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   destroy:
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-destroy.yml@v1.0.0
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-destroy.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       environment: ${{ github.event.inputs.environment }}
       chdir: "infra/stack"

@@ -44,34 +44,34 @@ jobs:
       upload-sarif: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
 
   fmt:
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-fmt.yml@v1.0.0
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-fmt.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       working-directory: "."
 
   # ── 3. Validate ─────────────────────────────────────────────────────────────
   validate:
     needs: [fmt]
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-validate.yml@v1.0.0
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-validate.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       chdir: "infra/stack"
 
   # ── 4. Lint ─────────────────────────────────────────────────────────────────
   lint:
     needs: [fmt]
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-lint.yml@v1.0.0
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-lint.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       lint-path: "infra/"
 
   # ── 5. Security (Trivy) ──────────────────────────────────────────────────────
   security:
     needs: [fmt]
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-security.yml@v1.0.0
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-security.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       scan-ref: "infra/"
 
   # ── 6. Security (tfsec) ──────────────────────────────────────────────────────
   tfsec:
     needs: [fmt]
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-tfsec.yml@v1.0.0
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-tfsec.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       scan-path: "infra/"
