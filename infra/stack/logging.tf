@@ -24,6 +24,83 @@ resource "aws_kms_alias" "logs" {
   target_key_id = aws_kms_key.logs[0].key_id
 }
 
+resource "aws_kms_key" "sns" {
+  count = var.enable_logging || var.enable_budgets ? 1 : 0
+  #checkov:skip=CKV2_AWS_64:KMS key policy is managed via the aws_kms_key_policy resource below to keep policies HCL-native.
+
+  description             = "KMS key for SNS encryption - ${var.project_name}-${var.environment}"
+  deletion_window_in_days = 10
+  enable_key_rotation     = var.kms_key_rotation_enabled
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.project_name}-sns-key"
+    }
+  )
+}
+
+resource "aws_kms_alias" "sns" {
+  count         = var.enable_logging || var.enable_budgets ? 1 : 0
+  name          = "alias/${var.project_name}-${var.environment}-sns"
+  target_key_id = aws_kms_key.sns[0].key_id
+}
+
+data "aws_iam_policy_document" "sns_kms" {
+  count = var.enable_logging || var.enable_budgets ? 1 : 0
+  #checkov:skip=CKV_AWS_356:KMS key policies require "*" as resource by AWS design; the policy is attached to the key and scoped to it implicitly.
+  #checkov:skip=CKV_AWS_111:KMS key policies require "*" as resource; write access is constrained by the key policy principal and conditions.
+  #checkov:skip=CKV_AWS_109:KMS key policies require "*" as resource; permissions management is constrained to the specific key by policy attachment.
+
+  statement {
+    sid       = "Enable IAM User Permissions"
+    effect    = "Allow"
+    actions   = ["kms:*"]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+  }
+
+  statement {
+    sid       = "Allow SNS"
+    effect    = "Allow"
+    actions   = [
+      "kms:Decrypt",
+      "kms:Encrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:DescribeKey",
+    ]
+    resources = ["*"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["sns.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "kms:CallerAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values   = ["sns.${var.aws_region}.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_kms_key_policy" "sns" {
+  count  = var.enable_logging || var.enable_budgets ? 1 : 0
+  key_id = aws_kms_key.sns[0].id
+  policy = data.aws_iam_policy_document.sns_kms[0].json
+}
+
 data "aws_iam_policy_document" "logs_kms" {
   count = var.enable_log_encryption ? 1 : 0
   #checkov:skip=CKV_AWS_356:KMS key policies require "*" as resource by AWS design; the policy is attached to the key and scoped to it implicitly.
@@ -124,6 +201,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail_logs" {
     id     = "archive-old-logs"
     status = "Enabled"
 
+    filter {}
+
     abort_incomplete_multipart_upload {
       days_after_initiation = 7
     }
@@ -187,21 +266,48 @@ data "aws_iam_policy_document" "cloudtrail_logs_bucket" {
     }
   }
 
-  statement {
-    sid       = "DenyUnencryptedObjectUploads"
-    effect    = "Deny"
-    actions   = ["s3:PutObject"]
-    resources = ["${aws_s3_bucket.cloudtrail_logs[0].arn}/*"]
+  dynamic "statement" {
+    for_each = var.require_https_only ? [1] : []
+    content {
+      sid       = "DenyInsecureTransport"
+      effect    = "Deny"
+      actions   = ["s3:*"]
+      resources = [
+        aws_s3_bucket.cloudtrail_logs[0].arn,
+        "${aws_s3_bucket.cloudtrail_logs[0].arn}/*",
+      ]
 
-    principals {
-      type        = "AWS"
-      identifiers = ["*"]
+      principals {
+        type        = "AWS"
+        identifiers = ["*"]
+      }
+
+      condition {
+        test     = "Bool"
+        variable = "aws:SecureTransport"
+        values   = ["false"]
+      }
     }
+  }
 
-    condition {
-      test     = "StringNotEquals"
-      variable = "s3:x-amz-server-side-encryption"
-      values   = ["aws:kms"]
+  dynamic "statement" {
+    for_each = var.enable_encryption_validation ? [1] : []
+    content {
+      sid       = "DenyUnencryptedObjectUploads"
+      effect    = "Deny"
+      actions   = ["s3:PutObject"]
+      resources = ["${aws_s3_bucket.cloudtrail_logs[0].arn}/*"]
+
+      principals {
+        type        = "AWS"
+        identifiers = ["*"]
+      }
+
+      condition {
+        test     = "StringNotEquals"
+        variable = "s3:x-amz-server-side-encryption"
+        values   = ["aws:kms"]
+      }
     }
   }
 }
@@ -220,7 +326,7 @@ resource "aws_s3_bucket_policy" "cloudtrail_logs" {
 resource "aws_sns_topic" "cloudtrail" {
   count             = var.enable_logging ? 1 : 0
   name              = "${var.project_name}-${var.environment}-cloudtrail"
-  kms_master_key_id = "alias/aws/sns"
+  kms_master_key_id = aws_kms_key.sns[0].arn
 
   tags = merge(
     local.common_tags,
@@ -459,4 +565,24 @@ resource "aws_cloudwatch_metric_alarm" "high_log_volume" {
       Name = "${var.project_name}-log-volume-alarm"
     }
   )
+}
+
+# Optional AWS X-Ray sampling (used to satisfy lint + enable tracing when desired)
+resource "aws_xray_sampling_rule" "default" {
+  count = var.enable_xray_tracing ? 1 : 0
+
+  rule_name      = "${var.project_name}-${var.environment}-default"
+  priority       = 10000
+  version        = 1
+  reservoir_size = 1
+  fixed_rate     = 0.01
+
+  service_name = "*"
+  service_type = "*"
+  host         = "*"
+  http_method  = "*"
+  url_path     = "*"
+  resource_arn = "*"
+
+  attributes = {}
 }

@@ -3,8 +3,9 @@
 
 # Budget notification SNS topic
 resource "aws_sns_topic" "budget_alerts" {
+  count             = var.enable_budgets ? 1 : 0
   name              = "${var.project_name}-${var.environment}-budget-alerts"
-  kms_master_key_id = "alias/aws/sns"
+  kms_master_key_id = aws_kms_key.sns[0].arn
 
   tags = merge(
     local.common_tags,
@@ -15,10 +16,11 @@ resource "aws_sns_topic" "budget_alerts" {
 }
 
 data "aws_iam_policy_document" "budget_alerts_sns" {
+  count = var.enable_budgets ? 1 : 0
   statement {
     effect    = "Allow"
     actions   = ["sns:Publish"]
-    resources = [aws_sns_topic.budget_alerts.arn]
+    resources = [aws_sns_topic.budget_alerts[0].arn]
 
     principals {
       type        = "Service"
@@ -28,15 +30,16 @@ data "aws_iam_policy_document" "budget_alerts_sns" {
 }
 
 resource "aws_sns_topic_policy" "budget_alerts" {
-  arn    = aws_sns_topic.budget_alerts.arn
-  policy = data.aws_iam_policy_document.budget_alerts_sns.json
+  count  = var.enable_budgets ? 1 : 0
+  arn    = aws_sns_topic.budget_alerts[0].arn
+  policy = data.aws_iam_policy_document.budget_alerts_sns[0].json
 }
 
 # Email subscriptions
 resource "aws_sns_topic_subscription" "budget_alerts_email" {
-  for_each = var.budget_alert_emails
+  for_each = var.enable_budgets ? var.budget_alert_emails : toset([])
 
-  topic_arn = aws_sns_topic.budget_alerts.arn
+  topic_arn = aws_sns_topic.budget_alerts[0].arn
   protocol  = "email"
   endpoint  = each.value
 }
@@ -49,7 +52,7 @@ resource "aws_budgets_budget" "monthly" {
   budget_type       = "COST"
   time_unit         = "MONTHLY"
   limit_unit        = "USD"
-  limit_amount      = var.monthly_budget_limit
+  limit_amount      = tostring(var.monthly_budget_limit)
   time_period_start = "2024-01-01_00:00"
   time_period_end   = "2087-12-31_23:59"
 
@@ -82,7 +85,7 @@ resource "aws_budgets_budget_action" "threshold_alerts" {
   notification_with_subscribers {
     account_id = data.aws_caller_identity.current.account_id
     type       = "FORECASTED"
-    addresses  = [aws_sns_topic.budget_alerts.arn]
+    addresses  = [aws_sns_topic.budget_alerts[0].arn]
   }
 
   lifecycle {
