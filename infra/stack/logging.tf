@@ -65,9 +65,9 @@ data "aws_iam_policy_document" "sns_kms" {
   }
 
   statement {
-    sid       = "Allow SNS"
-    effect    = "Allow"
-    actions   = [
+    sid    = "Allow SNS"
+    effect = "Allow"
+    actions = [
       "kms:Decrypt",
       "kms:Encrypt",
       "kms:ReEncrypt*",
@@ -269,9 +269,9 @@ data "aws_iam_policy_document" "cloudtrail_logs_bucket" {
   dynamic "statement" {
     for_each = var.require_https_only ? [1] : []
     content {
-      sid       = "DenyInsecureTransport"
-      effect    = "Deny"
-      actions   = ["s3:*"]
+      sid     = "DenyInsecureTransport"
+      effect  = "Deny"
+      actions = ["s3:*"]
       resources = [
         aws_s3_bucket.cloudtrail_logs[0].arn,
         "${aws_s3_bucket.cloudtrail_logs[0].arn}/*",
