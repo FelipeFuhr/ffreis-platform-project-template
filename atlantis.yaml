@@ -1,0 +1,71 @@
+version: 3
+
+projects:
+  - name: platform-project-prod
+    dir: infra/stack
+    workspace: prod
+    terraform_version: v1.9.8
+    workflow: platform-project
+    autoplan:
+      when_modified:
+        - "**/*.tf"
+        - "envs/prod/terraform.tfvars"
+        - "envs/prod/backend.hcl"
+      enabled: true
+    apply_requirements:
+      - approved
+      - mergeable
+
+  - name: platform-project-staging
+    dir: infra/stack
+    workspace: staging
+    terraform_version: v1.9.8
+    workflow: platform-project
+    autoplan:
+      when_modified:
+        - "**/*.tf"
+        - "envs/staging/terraform.tfvars"
+        - "envs/staging/backend.hcl"
+      enabled: true
+    apply_requirements:
+      - approved
+
+  - name: platform-project-dev
+    dir: infra/stack
+    workspace: dev
+    terraform_version: v1.9.8
+    workflow: platform-project
+    autoplan:
+      when_modified:
+        - "**/*.tf"
+        - "envs/dev/terraform.tfvars"
+        - "envs/dev/backend.hcl"
+      enabled: true
+    apply_requirements: []   # No approval required in dev
+
+workflows:
+  platform-project:
+    plan:
+      steps:
+        # Fetch dynamic config (accounts, roles) from the bootstrap registry.
+        # ATLANTIS_ORG must be set in the Atlantis server environment.
+        # Requires platform-bootstrap to be installed on the Atlantis server.
+        - run: |
+            platform-bootstrap fetch \
+              --org "${ATLANTIS_ORG:?ATLANTIS_ORG env var is required}" \
+              --output ./envs/$WORKSPACE/fetched.auto.tfvars.json
+        - init:
+            extra_args:
+              - -backend-config=./envs/${{ .Workspace }}/backend.hcl
+              - -reconfigure
+        - plan:
+            extra_args:
+              - -var-file=./envs/${{ .Workspace }}/terraform.tfvars
+    apply:
+      steps:
+        # Re-fetch before apply to ensure config is current.
+        - run: |
+            platform-bootstrap fetch \
+              --org "${ATLANTIS_ORG:?ATLANTIS_ORG env var is required}" \
+              --output ./envs/$WORKSPACE/fetched.auto.tfvars.json
+        - apply

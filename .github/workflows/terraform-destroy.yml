@@ -1,0 +1,29 @@
+name: Terraform Destroy (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: "Environment to destroy"
+        options:
+          - staging
+          - prod
+        required: true
+      confirm:
+        type: string
+        description: 'Type "DESTROY" to confirm'
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  destroy:
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-destroy.yml@main
+    with:
+      environment: ${{ github.event.inputs.environment }}
+      chdir: "infra/stack"
+      confirm: ${{ github.event.inputs.confirm }}
+    secrets: inherit

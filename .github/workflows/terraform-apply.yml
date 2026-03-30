@@ -1,0 +1,60 @@
+name: Terraform Apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - "envs/**"
+      - ".github/workflows/terraform-apply.yml"
+
+concurrency:
+  group: terraform-apply-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write   # Request OIDC JWT
+  contents: read
+  deployments: write
+
+jobs:
+  # Determine which environments need updates based on changed files
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      prod: ${{ steps.changes.outputs.prod }}
+      staging: ${{ steps.changes.outputs.staging }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed environments
+        id: changes
+        run: |
+          git diff --name-only HEAD~1 HEAD | grep -q "^envs/prod/" && echo "prod=true" >> "$GITHUB_OUTPUT" || echo "prod=false" >> "$GITHUB_OUTPUT"
+          git diff --name-only HEAD~1 HEAD | grep -q "^envs/staging/" && echo "staging=true" >> "$GITHUB_OUTPUT" || echo "staging=false" >> "$GITHUB_OUTPUT"
+          # Also deploy if shared infra changed
+          git diff --name-only HEAD~1 HEAD | grep -q "^infra/stack/" && {
+            echo "prod=true" >> "$GITHUB_OUTPUT"
+            echo "staging=true" >> "$GITHUB_OUTPUT"
+          }
+
+  apply-staging:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.staging == 'true'
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-apply.yml@main
+    with:
+      environment: "staging"
+      chdir: "infra/stack"
+    secrets: inherit
+
+  apply-prod:
+    needs: [detect-changes, apply-staging]
+    if: needs.detect-changes.outputs.prod == 'true'
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-apply.yml@main
+    with:
+      environment: "prod"
+      chdir: "infra/stack"
+    secrets: inherit
