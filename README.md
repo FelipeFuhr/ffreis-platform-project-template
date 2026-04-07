@@ -105,13 +105,12 @@ AWS_ACCOUNT_ID
 
 ```
 .
-├── infra/
-│   ├── stack/               # Main terraform configuration
-│   │   ├── main.tf         # Provider configuration
-│   │   ├── backend.tf      # Remote state configuration
-│   │   ├── variables.tf    # Input variables
-│   │   └── outputs.tf      # Output values
-│   └── modules/            # Reusable terraform modules
+├── stack/                  # Main terraform configuration
+│   ├── main.tf             # Provider configuration
+│   ├── backend.tf          # Remote state configuration
+│   ├── variables.tf        # Input variables
+│   └── outputs.tf          # Output values
+├── modules/                # Reusable terraform modules
 ├── envs/
 │   ├── prod/               # Production environment config
 │   │   ├── backend.hcl     # S3 key and DynamoDB table per env
@@ -208,8 +207,8 @@ Atlantis enables PR-based infrastructure changes:
 2. **Configure VCS webhook** to your Atlantis instance
 3. **Comment on PRs** to trigger plans/applies:
    ```
-   atlantis plan -d infra/stack -w staging
-   atlantis apply -d infra/stack -w staging
+   atlantis plan -d stack -w staging
+   atlantis apply -d stack -w staging
    ```
 
 The workflow in `atlantis.yaml` automatically:
@@ -244,7 +243,7 @@ aws_region   = "us-east-1"
 
 ## Adding Resources
 
-1. **Add terraform code** to `infra/stack/*.tf` or appropriate module
+1. **Add terraform code** to `stack/*.tf` or appropriate module
 2. **Format and validate**:
    ```bash
    make fmt-check
@@ -262,8 +261,8 @@ aws_region   = "us-east-1"
 Create reusable components:
 
 ```bash
-mkdir -p infra/modules/my-module
-cd infra/modules/my-module
+mkdir -p modules/my-module
+cd modules/my-module
 
 # Create module files
 cat > main.tf << 'EOF'
@@ -441,7 +440,7 @@ aws_region = "eu-west-1"  # Change region
 
 ### For Custom Tags
 
-Update `infra/stack/main.tf`:
+Update `stack/main.tf`:
 
 ```hcl
 default_tags {

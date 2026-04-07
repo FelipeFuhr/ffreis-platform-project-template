@@ -28,9 +28,9 @@ jobs:
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-validate.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     needs: [fmt]
     with:
-      chdir: "infra/stack"
+      chdir: "stack"
       validate-all-modules: true
-      modules-dir: "infra/modules"
+      modules-dir: "modules"
 
   lint:
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-lint.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43

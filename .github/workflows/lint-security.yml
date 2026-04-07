@@ -53,7 +53,7 @@ jobs:
     needs: [fmt]
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-validate.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
-      chdir: "infra/stack"
+      chdir: "stack"
 
   # ── 4. Lint ─────────────────────────────────────────────────────────────────
   lint:

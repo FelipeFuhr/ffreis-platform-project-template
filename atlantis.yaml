@@ -2,7 +2,7 @@ version: 3
 
 projects:
   - name: platform-project-prod
-    dir: infra/stack
+    dir: stack
     workspace: prod
     terraform_version: v1.9.8
     workflow: platform-project
@@ -17,7 +17,7 @@ projects:
       - mergeable
 
   - name: platform-project-staging
-    dir: infra/stack
+    dir: stack
     workspace: staging
     terraform_version: v1.9.8
     workflow: platform-project
@@ -31,7 +31,7 @@ projects:
       - approved
 
   - name: platform-project-dev
-    dir: infra/stack
+    dir: stack
     workspace: dev
     terraform_version: v1.9.8
     workflow: platform-project

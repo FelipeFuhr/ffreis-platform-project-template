@@ -1,16 +1,9 @@
- # S3 bucket for Terraform state (create during setup)
- # Run: aws s3api create-bucket --bucket <bucket-name> --region us-east-1
- bucket = "platform-project-template-tfstate-{ACCOUNT_ID}"  # REQUIRED: Replace {ACCOUNT_ID}
+# Terraform remote state backend — managed by platform-org (Layer 1)
+# S3 bucket and DynamoDB table are created by platform-org apply.
+# Run 'make fetch ENV=prod' to generate fetched.auto.tfvars.json before plan/apply.
 
- # DynamoDB table for state locking (create during setup)
- # Run: aws dynamodb create-table --table-name terraform-locks --attribute-definitions ... 
- dynamodb_table = "terraform-locks"
-
- # State file key path (per environment)
- key = "platform-project-template/prod/terraform.tfstate"
-
- # AWS region
- region = "us-east-1"
-
- # Enable server-side encryption for state
- encrypt = true
+bucket         = "ffreis-tf-state-runtime"
+key            = "platform-project-template/prod/terraform.tfstate"
+region         = "us-east-1"
+dynamodb_table = "ffreis-tf-locks-runtime"
+encrypt        = true

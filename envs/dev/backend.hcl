@@ -1,16 +1,9 @@
- # S3 bucket for Terraform state — injected at terraform init.
- # The bucket is shared across environments; the key below provides isolation.
- # Set via: terraform init -backend-config=../envs/dev/backend.hcl
- bucket = "platform-project-template-tfstate-{ACCOUNT_ID}"  # REQUIRED: Replace {ACCOUNT_ID}
+# Terraform remote state backend — managed by platform-org (Layer 1)
+# S3 bucket and DynamoDB table are created by platform-org apply.
+# Run 'make fetch ENV=dev' to generate fetched.auto.tfvars.json before plan/apply.
 
- # DynamoDB table for state locking
- dynamodb_table = "terraform-locks"
-
- # State file key — dev is fully isolated from staging and prod.
- key = "platform-project-template/dev/terraform.tfstate"
-
- # AWS region
- region = "us-east-1"
-
- # Enable server-side encryption for state
- encrypt = true
+bucket         = "ffreis-tf-state-runtime"
+key            = "platform-project-template/dev/terraform.tfstate"
+region         = "us-east-1"
+dynamodb_table = "ffreis-tf-locks-runtime"
+encrypt        = true

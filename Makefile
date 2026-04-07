@@ -1,5 +1,5 @@
 SHELL    := /bin/bash
-STACK    := infra/stack
+STACK    := stack
 ENVS_DIR := envs
 
 ENV           ?=
@@ -9,6 +9,11 @@ ORG           ?= $(ATLANTIS_ORG)
 PROFILE       ?= default
 BOOTSTRAP_BIN ?= platform-bootstrap
 DYNAMOCTL_BIN ?= dynamoctl
+
+CLI_BIN ?= ./bin/platform-project
+CLI_SRC := ./cmd/platform-project
+GO      ?= $(shell command -v go 2>/dev/null || echo /usr/local/go/bin/go)
+GOFMT   ?= $(shell command -v gofmt 2>/dev/null || echo /usr/local/go/bin/gofmt)
 
 FETCHED_FILE = $(ENVS_DIR)/$(ENV)/fetched.auto.tfvars.json
 
@@ -26,10 +31,45 @@ _require_fetched: _require_env
 		echo "Missing $(FETCHED_FILE). Run: make fetch ENV=$(ENV)" >&2; \
 		exit 1)
 
-.PHONY: help fetch init plan apply destroy nuke fmt fmt-check validate lint test check security coverage \
+.PHONY: build go-test go-plan go-apply go-nuke \
+        help fetch init plan apply destroy nuke fmt fmt-check validate lint test check security coverage \
         lock-list lock-info lock-cleanup \
         secrets-scan-staged lefthook-bootstrap lefthook-install lefthook-run lefthook \
         _require_env _require_fetched
+
+## build: compile the platform-project CLI to ./bin/platform-project
+build:
+	$(GO) build -o $(CLI_BIN) $(CLI_SRC)
+
+## go-test: run Go unit tests for the CLI
+go-test:
+	$(GO) test ./... -v
+
+## go-plan [ENV=prod]: run terraform plan via the CLI (assumes platform-admin role)
+go-plan: build
+	$(CLI_BIN) plan --env $(or $(ENV),prod) --region us-east-1
+
+## go-apply [ENV=prod]: run terraform apply via the CLI
+go-apply: build
+	$(CLI_BIN) apply --env $(or $(ENV),prod) --region us-east-1
+
+## go-nuke [ENV=prod]: destroy all resources (prompts for confirmation)
+go-nuke: build
+	$(CLI_BIN) nuke --env $(or $(ENV),prod) --region us-east-1
+
+## fmt: format all Go and Terraform files
+fmt:
+	$(GOFMT) -w .
+	terraform fmt -recursive .
+
+## fmt-check: fail if any Go or Terraform file is not formatted
+fmt-check:
+	@unformatted=$$($(GOFMT) -l .); \
+	if [ -n "$$unformatted" ]; then \
+	  printf "The following files need gofmt:\n%s\n\nFix with: gofmt -w .\n" "$$unformatted"; \
+	  exit 1; \
+	fi
+	terraform fmt -check -recursive .
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target> [ENV=<env>]\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-24s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -54,13 +94,6 @@ plan: _require_env _require_fetched
 	cd $(STACK) && terraform plan \
 		-var-file=../$(ENVS_DIR)/$(ENV)/terraform.tfvars \
 		-out=../$(ENVS_DIR)/$(ENV)/tfplan
-
-fmt: ## Format all terraform files
-	terraform fmt -recursive .
-
-fmt-check: ## Check terraform formatting
-	terraform fmt -recursive -check .
-	@echo "✓ All files are properly formatted"
 
 validate: _require_env ## Validate terraform syntax
 	cd $(STACK) && terraform validate
@@ -122,11 +155,8 @@ lint: ## Run tflint across all Terraform files
 	tflint --init
 	tflint --recursive --format compact .
 
-## test: no unit tests — use 'make validate' or 'make plan ENV=<env>'
-test: ## No unit tests — use validate or plan
-	@echo "INFO: No unit tests for Terraform repos. Use:"
-	@echo "      make validate          — static validation"
-	@echo "      make plan ENV=<env>    — execution plan against real state"
+## test: run Go unit tests for the CLI
+test: go-test
 
 ## security: run trivy + checkov security scans
 security:

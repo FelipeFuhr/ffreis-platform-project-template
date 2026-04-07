@@ -1,4 +1,5 @@
 .scannerwork
+atlantis.yaml
 
 # Terraform files and directories
 **/.terraform/

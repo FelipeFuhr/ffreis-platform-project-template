@@ -49,7 +49,7 @@ jobs:
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-apply.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       environment: "staging"
-      chdir: "infra/stack"
+      chdir: "stack"
     secrets: inherit
 
   apply-prod:
@@ -58,5 +58,5 @@ jobs:
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-apply.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       environment: "prod"
-      chdir: "infra/stack"
+      chdir: "stack"
     secrets: inherit

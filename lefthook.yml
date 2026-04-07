@@ -14,7 +14,7 @@ pre-commit:
       run: tflint --recursive --format compact
     validate:
       glob: "**/*.tf"
-      run: terraform -chdir=infra/stack init -backend=false -input=false -no-color && terraform -chdir=infra/stack validate -no-color
+      run: terraform -chdir=stack init -backend=false -input=false -no-color && terraform -chdir=stack validate -no-color
     secret-scan:
       run: make secrets-scan-staged
 
