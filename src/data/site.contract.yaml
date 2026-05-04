@@ -1,0 +1,27 @@
+required:
+  - site.name
+  - site.domain
+  - site.language
+  - site.title
+  - site.description
+  - navigation.primary
+  - hero.eyebrow
+  - hero.title
+  - hero.description
+  - hero.primary_cta.label
+  - hero.primary_cta.href
+
+allowed:
+  - site.name
+  - site.domain
+  - site.language
+  - site.title
+  - site.description
+  - navigation.primary
+  - navigation.primary.*.label
+  - navigation.primary.*.href
+  - hero.eyebrow
+  - hero.title
+  - hero.description
+  - hero.primary_cta.label
+  - hero.primary_cta.href

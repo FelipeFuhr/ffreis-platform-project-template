@@ -1,0 +1,66 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'src/assets/**'
+      - 'src/data/**'
+      - 'src/templates/**'
+      - 'sitemap.yaml'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Build and Deploy to S3 + CloudFront
+    runs-on: ubuntu-latest
+    environment: prod
+    env:
+      WEBSITE_COMPILER_REPO: ${{ vars.WEBSITE_COMPILER_REPO }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require compiler repository variable
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${WEBSITE_COMPILER_REPO:-}" ]]; then
+            echo "Repository variable WEBSITE_COMPILER_REPO must be set for this template." >&2
+            exit 1
+          fi
+      - name: Checkout website compiler
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.WEBSITE_COMPILER_REPO }}
+          path: website-compiler
+          token: ${{ secrets.CI_REPO_READ_TOKEN || github.token }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+      - name: Build static site
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          go -C ./website-compiler run ./cmd/build-static -website-root "$PWD" -out "$PWD/dist"
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      - name: Upload static site to S3
+        env:
+          S3_BUCKET: ${{ secrets.S3_WEBSITE_BUCKET }}
+        run: |
+          set -euo pipefail
+          aws s3 sync dist/ "s3://$S3_BUCKET" --delete
+      - name: Invalidate CloudFront cache
+        env:
+          CF_DISTRIBUTION_ID: ${{ secrets.CF_DISTRIBUTION_ID }}
+        run: |
+          set -euo pipefail
+          aws cloudfront create-invalidation \
+            --distribution-id "$CF_DISTRIBUTION_ID" \
+            --paths '/*'

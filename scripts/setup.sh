@@ -43,8 +43,8 @@ sed -i.bak "s|platform-project-template|$PROJECT_NAME|g" envs/staging/backend.hc
 rm -f envs/prod/backend.hcl.bak envs/staging/backend.hcl.bak
 
 # Update stack naming
-sed -i.bak "s|platform-project-template|$PROJECT_NAME|g" infra/stack/main.tf
-rm -f infra/stack/main.tf.bak
+sed -i.bak "s|platform-project-template|$PROJECT_NAME|g" stack/main.tf
+rm -f stack/main.tf.bak
 
 echo "✓ Configuration updated"
 

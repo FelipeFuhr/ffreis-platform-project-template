@@ -7,7 +7,7 @@ This directory contains reusable terraform modules for your platform.
 Create a subdirectory for each module:
 
 ```
-infra/modules/example-module/
+modules/example-module/
 ├── main.tf
 ├── variables.tf
 ├── outputs.tf

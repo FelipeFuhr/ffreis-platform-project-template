@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="{{ dig .SiteData "site" "language" }}">
+  <head>
+    {{ template "partials/head" . }}
+  </head>
+  <body>
+    {{ template "partials/header" . }}
+    <main>
+      {{ block "page" . }}{{ end }}
+    </main>
+    {{ template "partials/footer" . }}
+  </body>
+</html>

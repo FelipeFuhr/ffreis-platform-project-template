@@ -1,0 +1,7 @@
+pages:
+  - path: /
+    template: index
+  - path: /404.html
+    template: 404
+  - path: /500.html
+    template: 500

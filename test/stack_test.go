@@ -51,7 +51,7 @@ func TestProjectStackIAMRoles(t *testing.T) {
 	callerARN := *callerID.Arn
 
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
-		TerraformDir: test_structure.CopyTerraformFolderToTemp(t, "..", "infra/stack"),
+		TerraformDir: test_structure.CopyTerraformFolderToTemp(t, "..", "stack"),
 		BackendConfig: testBackendConfig(t, uniqueID),
 		Vars: map[string]interface{}{
 			"project_name":           projectName,
@@ -152,7 +152,7 @@ func TestProjectStackLogging(t *testing.T) {
 	require.NoError(t, err, "get caller identity")
 
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
-		TerraformDir: test_structure.CopyTerraformFolderToTemp(t, "..", "infra/stack"),
+		TerraformDir: test_structure.CopyTerraformFolderToTemp(t, "..", "stack"),
 		BackendConfig: testBackendConfig(t, uniqueID),
 		Vars: map[string]interface{}{
 			"project_name":           projectName,

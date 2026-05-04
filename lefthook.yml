@@ -1,32 +1,34 @@
-pre-commit:
-  parallel: true
-  commands:
-    hygiene-merge-markers:
-      run: ./scripts/hooks/check_merge_markers.sh
-    hygiene-large-files:
-      run: ./scripts/hooks/check_large_files.sh
-    hygiene-binary-files:
-      run: ./scripts/hooks/check_binary_files.sh
-    fmt-check:
-      run: make fmt-check
-    lint:
-      glob: "**/*.tf"
-      run: tflint --recursive --format compact
-    validate:
-      glob: "**/*.tf"
-      run: terraform -chdir=infra/stack init -backend=false -input=false -no-color && terraform -chdir=infra/stack validate -no-color
-    secret-scan:
-      run: make secrets-scan-staged
+min_version: 2.0.0
 
-pre-push:
-  parallel: false
-  commands:
-    lint:
-      run: make lint
-    validate:
-      run: make validate
+output:
+  - summary
+  - failure
 
-commit-msg:
+ci:
   commands:
-    conventional-commits:
-      run: ./scripts/hooks/check_commit_msg.sh {1}
+    prettier_check:
+      run: make format-check
+    js_syntax:
+      run: make js-syntax
+    compiler_sanity:
+      run: make sanity-check WEBSITE_COMPILER_CLI="${WEBSITE_COMPILER_CLI:-./website-compiler/cmd/website-compiler}"
+    compiler_site_data:
+      run: make site-data-check WEBSITE_COMPILER_CLI="${WEBSITE_COMPILER_CLI:-./website-compiler/cmd/website-compiler}"
+    compiler_asset_usage:
+      run: make asset-usage-check WEBSITE_COMPILER_CLI="${WEBSITE_COMPILER_CLI:-./website-compiler/cmd/website-compiler}"
+    compiler_template_pages:
+      run: make template-compile-check WEBSITE_COMPILER="${WEBSITE_COMPILER:-./website-compiler/cmd/build-static}"
+    build_static:
+      run: make build-static-check WEBSITE_COMPILER="${WEBSITE_COMPILER:-./website-compiler/cmd/build-static}"
+    build_inline:
+      run: make build-inline-check WEBSITE_COMPILER="${WEBSITE_COMPILER:-./website-compiler/cmd/build-static}"
+
+
+    agents-drift-hint:
+      run: |
+        changed=$(git diff --cached --name-only 2>/dev/null)
+        if echo "$changed" | grep -qE '\.(go|py|rs|tf)$' && \
+           ! echo "$changed" | grep -q 'AGENTS\.md'; then
+          echo "hint: source files changed — check if AGENTS.md needs updating" >&2
+        fi
+        exit 0

@@ -1,11 +1,14 @@
 version: 2
 updates:
-  - package-ecosystem: github-actions
-    directory: /
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
-      interval: daily
-
-  - package-ecosystem: gomod
-    directory: /test
+      interval: "weekly"
+  - package-ecosystem: "terraform"
+    directory: "/stack"
     schedule:
-      interval: daily
+      interval: "weekly"
+  - package-ecosystem: "gomod"
+    directory: "/test"
+    schedule:
+      interval: "weekly"

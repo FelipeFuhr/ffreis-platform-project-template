@@ -1,4 +1,7 @@
 .scannerwork
+dist/
+website-compiler/
+site.local.yaml
 
 # Terraform files and directories
 **/.terraform/

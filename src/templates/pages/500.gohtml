@@ -1,0 +1,9 @@
+{{ define "page" }}
+  <section class="shell error-page">
+    <h1>500</h1>
+    <p>Something went wrong while rendering this page.</p>
+    <p><a href="/">Return home</a></p>
+  </section>
+{{ end }}
+
+{{ template "layout/base.gohtml" . }}

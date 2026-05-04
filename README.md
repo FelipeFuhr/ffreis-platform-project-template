@@ -1,269 +1,136 @@
-# Platform Project Template
+# Website Project Template
 
-A comprehensive, production-ready Terraform project template with multi-environment support, OIDC-based GitHub Actions CI/CD, Atlantis integration, and DynamoDB lock management.
+This repository is being repositioned into a public-safe website project template.
 
-## Features
+The target shape is intentionally close to the Flemming website delivery model:
 
-✨ **Core Infrastructure**
-- Multi-environment support (prod, staging, dev)
-- Remote S3 state management with DynamoDB locks
-- OIDC-based GitHub Actions (no static credentials)
-- Comprehensive Terraform workflows
+- a website source tree under `src/`
+- contract-based site data under `src/data/`
+- static build and validation checks driven by a website compiler
+- self-contained GitHub workflows for CI, hygiene, and deployment
+- optional private infrastructure adapters kept outside the public template
 
-🔐 **Security & Governance**
-- GitHub Actions OIDC integration with AWS STS
-- Temporary session credentials (no long-lived keys)
-- Infrastructure linting (TFLint, tfsec, Checkov)
-- SARIF security scanning results
+## Template Boundary
 
-🚀 **Deployment & Operations**
-- Atlantis-ready configuration for PR-based planning/applying
-- Manual apply workflow for controlled deployments
-- Destroy workflow with confirmation gates
-- Lock management utilities via `dynamoctl`
+This template is for the public website repository only.
 
-## Quick Start
+Included in the public template:
 
-### 1. Clone and Customize
+- `src/` website source layout
+- `src/data/site.yaml` and `src/data/site.contract.yaml`
+- quality checks for formatting, JavaScript syntax, contract validation, and asset validation
+- deploy examples using standard GitHub Actions, OIDC, S3, and CloudFront inputs
+- public-safe repository hygiene such as `lefthook`, `renovate`, and `sonar-project.properties`
 
-```bash
-# Clone this template
-cp -r platform-project-template my-project
-cd my-project
+Excluded from the public template baseline:
 
-# Run setup script
-bash scripts/setup.sh my-project ffreis us-east-1
-```
+- private bootstrap or shared-infra tooling
+- org-specific reusable workflow repositories
+- private bucket names, account IDs, or role names
+- shared access-log buckets or shared Lambda artifact contracts
+- domain-specific backend or Lambda implementations
 
-### 2. Prerequisites
+Private infrastructure should be layered on top through a separate repo or internal adapter docs.
 
-Ensure you have these tools installed:
+## Current Migration Status
 
-```bash
-# Terraform
-brew install terraform  # or download from terraform.io
-
-# AWS CLI (for deployment workflows)
-brew install awscli
-
-# Optional but recommended
-brew install tflint
-brew install terraform-docs
-```
-
-### 3. AWS Backend Setup
-
-The template requires pre-existing S3 and DynamoDB resources:
-
-```bash
-# These must be created once per AWS account
-# Use platform-bootstrap or your standard provisioning process:
-
-# S3 bucket for terraform state
-aws s3api create-bucket \
-  --bucket ffreis-tf-state \
-  --region us-east-1
-
-# DynamoDB table for state locks (per environment)
-aws dynamodb create-table \
-  --table-name ffreis-tf-locks-prod \
-  --attribute-definitions AttributeName=ID,AttributeType=S \
-  --key-schema AttributeName=ID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST \
-  --region us-east-1
-```
-
-### 4. GitHub Configuration
-
-#### Create IAM Roles for OIDC
-
-Assuming you've set up GitHub OIDC trust principal via `platform-github-oidc`:
-
-```bash
-# Create terraform-specific roles with appropriate permissions
-# These roles should have trust policy allowing:
-# - principal: arn:aws:iam::<account>:oidc-provider/token.actions.githubusercontent.com
-# - subjects: repo:owner/repo:*
-```
-
-#### Add GitHub Secrets
-
-In your GitHub repository, add these secrets:
-
-```
-TERRAFORM_PLAN_ROLE_ARN
-  - Role ARN for plan-only operations (read-only or reduced permissions)
-
-TERRAFORM_APPLY_ROLE_ARN
-  - Role ARN for apply operations (full terraform permissions)
-  
-AWS_ACCOUNT_ID
-  - Your AWS account ID (used in workflows)
-```
+The visible entry points in this repo are now website-oriented. Some legacy infrastructure scaffolding still exists in the repository while the migration is in progress, but it is not part of the intended public template surface.
 
 ## Project Structure
 
-```
+```text
 .
-├── infra/
-│   ├── stack/               # Main terraform configuration
-│   │   ├── main.tf         # Provider configuration
-│   │   ├── backend.tf      # Remote state configuration
-│   │   ├── variables.tf    # Input variables
-│   │   └── outputs.tf      # Output values
-│   └── modules/            # Reusable terraform modules
-├── envs/
-│   ├── prod/               # Production environment config
-│   │   ├── backend.hcl     # S3 key and DynamoDB table per env
-│   │   └── terraform.tfvars
-│   └── staging/            # Staging environment config
-├── .github/workflows/      # GitHub Actions pipelines
-│   ├── terraform-plan.yml
-│   ├── terraform-apply.yml
-│   ├── terraform-destroy.yml
-│   └── lint-security.yml
-├── scripts/                # Utility scripts
-│   ├── setup.sh
-│   └── manage-locks.sh
-├── atlantis.yaml          # Atlantis PR automation config
-├── Makefile               # Local development targets
+├── src/
+│   ├── assets/               # CSS, JS, images, fonts, static assets
+│   ├── data/
+│   │   ├── site.yaml         # Stable global site settings
+│   │   ├── site.contract.yaml# Required and allowed data keys
+│   │   └── site.d/           # Layered site-data overlays
+│   └── templates/
+│       ├── layout/           # Base layouts
+│       ├── partials/         # Shared page fragments
+│       └── pages/            # Route-level pages
+├── sanity/                   # Optional sanity-check inputs or fixtures
+├── dist/                     # Generated output (ignored)
+├── .github/workflows/        # Public-safe CI and deploy workflows
+├── Makefile                  # Local build and validation targets
+├── lefthook.yml              # Single entrypoint for CI checks
+├── sitemap.yaml              # Optional route metadata for builds/deploys
 └── README.md
-
-## 📚 Documentation
-
-- **[SETUP.md](./SETUP.md)** – Pre-deployment setup guide (S3 bucket, backend, OIDC, GitHub secrets)
-- **[VALIDATION.md](./VALIDATION.md)** – Post-deployment validation checklist and verification results
-- **[CONTRIBUTING.md](./CONTRIBUTING.md)** – Development standards, PR guidelines, and contribution workflow
-- **[EXAMPLES.md](./EXAMPLES.md)** – Resource patterns, best practices, and code examples
- 
-## Additional Information
-For more details, refer to the respective documentation files.
 ```
 
-## Usage
+## Expected Tooling
 
-### Local Development
+This template assumes a compatible website compiler exists, but does not hardcode a private repository.
 
-Format and validate:
+The compiler path is configured through:
+
+- `WEBSITE_COMPILER`
+- `WEBSITE_COMPILER_CLI`
+- `WEBSITE_COMPILER_REPO` in GitHub repository variables for CI
+
+That keeps the template generic while preserving the Flemming-style contract/build flow.
+
+## Local Usage
+
+Run the standard checks:
 
 ```bash
-make fmt           # Format all terraform files
-make fmt-check     # Verify formatting
-make validate      # Validate terraform syntax
-make check         # Run all checks
+make format-check
+make js-syntax
+make site-data-check
+make asset-usage-check
+make template-compile-check
+make build-static-check
+make build-inline-check
 ```
 
-Plan changes for staging:
+Or run the full local quality bundle:
 
 ```bash
-make init ENV=staging
-make plan ENV=staging
+make check
 ```
 
-### State & Lock Management
+## GitHub Configuration
 
-View locks in DynamoDB:
+Repository variables:
 
-```bash
-make lock-list ENV=prod      # List all locks
-make lock-info ENV=prod      # Show table stats
-make lock-cleanup ENV=prod   # Remove stale locks (manual confirmation)
-```
+- `WEBSITE_COMPILER_REPO` — compiler repository to checkout in CI
+- `AWS_REGION` — deploy region, defaults to `us-east-1` if omitted
 
-Or use the utility script:
+Repository secrets:
 
-```bash
-bash scripts/manage-locks.sh list prod
-bash scripts/manage-locks.sh info prod
-bash scripts/manage-locks.sh cleanup prod
-```
+- `AWS_DEPLOY_ROLE_ARN` — OIDC deploy role
+- `S3_WEBSITE_BUCKET` — destination website bucket
+- `CF_DISTRIBUTION_ID` — CloudFront distribution to invalidate
+- `CI_REPO_READ_TOKEN` — optional token if the compiler repo is private
 
-### GitHub Actions Workflows
+## Private Infra Integration
 
-**terraform-plan.yml** (on pull requests)
-- Runs on PR creation/update
-- Tests formatting, validation, and planning
-- Posts plan diff to PR for review
+If you pair this public template with a private infrastructure repo, keep that integration outside the template code.
 
-**terraform-apply.yml** (on main branch)
-- Detects which environments changed
-- Applies staging before prod (sequential via concurrency)
-- Creates deployment records in GitHub
+Recommended contract:
 
-**terraform-destroy.yml** (manual)
-- Triggered manually via GitHub UI
-- Requires explicit confirmation (`DESTROY` text)
-- Suitable for cleanup in dev/staging environments
+1. the private infra repo creates the deployment role, website bucket, and CDN distribution
+2. those outputs are copied into repository variables and secrets
+3. the public website repo remains generic and reusable
 
-**lint-security.yml** (on pull requests)
-- TFLint: Best practices and style
-- tfsec: Security issue detection
-- Checkov: Policy compliance scanning
+## Related Repos
 
-### Atlantis Integration
+- Flemming website repo shape is the reference for this template
+- The ffreis website should later converge on the same public-safe structure
 
-Atlantis enables PR-based infrastructure changes:
+## Next Migration Steps
 
-1. **Install Atlantis** on your infrastructure
-2. **Configure VCS webhook** to your Atlantis instance
-3. **Comment on PRs** to trigger plans/applies:
-   ```
-   atlantis plan -d infra/stack -w staging
-   atlantis apply -d infra/stack -w staging
-   ```
-
-The workflow in `atlantis.yaml` automatically:
-- Fetches dynamic config from `platform-bootstrap`
-- Initializes terraform with environment-specific backend
-- Plans and applies changes
-
-## Environment-Specific Configuration
-
-Each environment has its own configuration:
-
-### Backend Configuration (`envs/<env>/backend.hcl`)
-
-```hcl
-# Specifies where state is stored
-key = "platform-project-template/prod/terraform.tfstate"
-```
-
-Customize for your organization and state bucket.
-
-### Terraform Variables (`envs/<env>/terraform.tfvars`)
-
-```hcl
-project_name = "platform-project"
-environment  = "prod"
-aws_region   = "us-east-1"
-
-# Add your environment-specific variables
-# Example:
-# vpc_cidr = "10.0.0.0/16"
-```
-
-## Adding Resources
-
-1. **Add terraform code** to `infra/stack/*.tf` or appropriate module
-2. **Format and validate**:
-   ```bash
-   make fmt-check
-   make validate
-   ```
-3. **Test locally**:
-   ```bash
-   make plan ENV=staging
-   ```
-4. **Create PR and let GitHub Actions test**
-5. **Merge and apply via GitHub Actions or Atlantis**
-
-## Adding Modules
+- remove the remaining legacy infra scaffold from this repo or move it to an internal template
+- publish a companion private integration guide for teams using shared infrastructure
+- align the ffreis website repo to the same public-safe website shape
 
 Create reusable components:
 
 ```bash
-mkdir -p infra/modules/my-module
-cd infra/modules/my-module
+mkdir -p modules/my-module
+cd modules/my-module
 
 # Create module files
 cat > main.tf << 'EOF'
@@ -441,7 +308,7 @@ aws_region = "eu-west-1"  # Change region
 
 ### For Custom Tags
 
-Update `infra/stack/main.tf`:
+Update `stack/main.tf`:
 
 ```hcl
 default_tags {

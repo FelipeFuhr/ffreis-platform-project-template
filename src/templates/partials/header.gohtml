@@ -1,0 +1,14 @@
+{{ define "partials/header" }}
+  <header class="site-header">
+    <div class="shell site-header__inner">
+      <a class="site-logo" href="/">{{ dig .SiteData "site" "name" }}</a>
+      <nav aria-label="Primary">
+        <ul class="site-nav">
+          {{ range dig .SiteData "navigation" "primary" }}
+            <li><a href="{{ dig . "href" }}">{{ dig . "label" }}</a></li>
+          {{ end }}
+        </ul>
+      </nav>
+    </div>
+  </header>
+{{ end }}
