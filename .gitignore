@@ -1,5 +1,7 @@
 .scannerwork
-atlantis.yaml
+dist/
+website-compiler/
+site.local.yaml
 
 # Terraform files and directories
 **/.terraform/

@@ -1,0 +1,7 @@
+{{ define "partials/head" }}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ dig .SiteData "site" "title" }}</title>
+  <meta name="description" content="{{ dig .SiteData "site" "description" }}">
+  {{ template "partials/styles" . }}
+{{ end }}

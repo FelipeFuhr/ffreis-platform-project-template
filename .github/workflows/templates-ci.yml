@@ -1,0 +1,61 @@
+name: Templates CI
+
+on:
+  pull_request:
+    paths:
+      - 'src/assets/**'
+      - 'src/data/**'
+      - 'src/templates/**'
+      - 'sitemap.yaml'
+      - 'Makefile'
+      - 'sanity/**'
+      - '.github/workflows/**'
+  push:
+    branches: [main, master]
+    paths:
+      - 'src/assets/**'
+      - 'src/data/**'
+      - 'src/templates/**'
+      - 'sitemap.yaml'
+      - 'Makefile'
+      - 'sanity/**'
+      - '.github/workflows/**'
+
+jobs:
+  checks:
+    name: CI Checks (Lefthook)
+    runs-on: ubuntu-latest
+    env:
+      WEBSITE_COMPILER_REPO: ${{ vars.WEBSITE_COMPILER_REPO }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require compiler repository variable
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${WEBSITE_COMPILER_REPO:-}" ]]; then
+            echo "Repository variable WEBSITE_COMPILER_REPO must be set for this template." >&2
+            exit 1
+          fi
+      - name: Checkout website compiler
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.WEBSITE_COMPILER_REPO }}
+          path: website-compiler
+          token: ${{ secrets.CI_REPO_READ_TOKEN || github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+      - name: Install lefthook
+        run: |
+          go install github.com/evilmartians/lefthook/v2@v2.1.4
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Run checks
+        env:
+          WEBSITE_COMPILER_CLI: ./website-compiler/cmd/website-compiler
+          WEBSITE_COMPILER: ./website-compiler/cmd/build-static
+        run: lefthook run ci

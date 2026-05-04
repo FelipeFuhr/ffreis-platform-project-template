@@ -1,0 +1,12 @@
+{{ define "page" }}
+  <section class="hero" id="start">
+    <div class="shell">
+      <p class="hero__eyebrow">{{ dig .SiteData "hero" "eyebrow" }}</p>
+      <h1>{{ dig .SiteData "hero" "title" }}</h1>
+      <p class="hero__body">{{ dig .SiteData "hero" "description" }}</p>
+      <a class="button" href="{{ dig .SiteData "hero" "primary_cta" "href" }}">{{ dig .SiteData "hero" "primary_cta" "label" }}</a>
+    </div>
+  </section>
+{{ end }}
+
+{{ template "layout/base.gohtml" . }}
