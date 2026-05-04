@@ -28,7 +28,7 @@ jobs:
     env:
       WEBSITE_COMPILER_REPO: ${{ vars.WEBSITE_COMPILER_REPO }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Require compiler repository variable
         shell: bash
         run: |
@@ -38,7 +38,7 @@ jobs:
             exit 1
           fi
       - name: Checkout website compiler
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ vars.WEBSITE_COMPILER_REPO }}
           path: website-compiler
