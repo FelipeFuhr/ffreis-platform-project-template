@@ -1,0 +1,108 @@
+name: Integration Tests (Terratest)
+
+# Integration tests deploy real AWS resources (dev environment) and destroy them after.
+# They run:
+#   - Manually via workflow_dispatch (for on-demand validation)
+#   - On push to main (post-merge gate)
+#
+# They do NOT run on pull_request to avoid giving fork PRs AWS access.
+#
+# Required secrets:
+#   AWS_TEST_ROLE_ARN        — IAM role Terratest assumes via OIDC
+#   TEST_BACKEND_BUCKET      — S3 bucket for isolated test Terraform state
+#   TEST_BACKEND_LOCK_TABLE  — DynamoDB table for state locking (optional)
+# Optional:
+#   AWS_TEST_REGION          — override region (default: us-east-1)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - "envs/**"
+      - "test/**"
+      - ".github/workflows/integration-tests.yml"
+  workflow_dispatch:
+    inputs:
+      test_filter:
+        description: "Go -run filter (leave empty for all tests)"
+        required: false
+        default: ""
+
+permissions:
+  id-token: write   # Required for OIDC → AWS credential exchange
+  contents: read
+
+concurrency:
+  # Only one integration run at a time — they create real AWS resources.
+  group: integration-tests
+  cancel-in-progress: false   # Don't cancel; a partial run may leave orphaned resources
+
+env:
+  GO_VERSION: "1.21"
+  TF_VERSION: "1.9.8"
+  AWS_TEST_REGION: "us-east-1"
+
+jobs:
+  terratest:
+    name: Terratest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      # ── Go setup ────────────────────────────────────────────────────────────
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: test/go.sum
+
+      - name: Download Go test dependencies
+        run: cd test && go mod download
+
+      # ── Terraform setup ─────────────────────────────────────────────────────
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          # Disable the wrapper so terraform.Output() returns clean strings.
+          terraform_wrapper: false
+
+      # ── AWS credentials (OIDC — no static keys) ─────────────────────────────
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_TEST_ROLE_ARN }}
+          aws-region: ${{ env.AWS_TEST_REGION }}
+          role-session-name: terratest-${{ github.run_id }}
+
+      # ── Run tests ────────────────────────────────────────────────────────────
+      - name: Run Terratest
+        env:
+          AWS_TEST_REGION: ${{ env.AWS_TEST_REGION }}
+          TEST_BACKEND_BUCKET: ${{ secrets.TEST_BACKEND_BUCKET }}
+          TEST_BACKEND_LOCK_TABLE: ${{ secrets.TEST_BACKEND_LOCK_TABLE }}
+        run: |
+          FILTER="${{ github.event.inputs.test_filter }}"
+          if [ -n "$FILTER" ]; then
+            cd test && go test -v -timeout 30m -count=1 -run "$FILTER" ./...
+          else
+            cd test && go test -v -timeout 30m -count=1 ./...
+          fi
+
+      # ── Emergency cleanup ────────────────────────────────────────────────────
+      # If tests crash without running defer terraform.Destroy, tag-based cleanup
+      # can find orphaned resources via the "ManagedBy=terratest" tag.
+      - name: List potentially orphaned test resources (on failure)
+        if: failure()
+        run: |
+          echo "Listing resources tagged ManagedBy=terratest in ${{ env.AWS_TEST_REGION }}..."
+          aws resourcegroupstaggingapi get-resources \
+            --tag-filters Key=ManagedBy,Values=terratest \
+            --region "${{ env.AWS_TEST_REGION }}" \
+            --query 'ResourceTagMappingList[].ResourceARN' \
+            --output text || echo "(no resources found or API error)"

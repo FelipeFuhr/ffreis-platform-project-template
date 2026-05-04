@@ -1,5 +1,6 @@
 version: 2
 updates:
+<<<<<<< HEAD
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -9,3 +10,14 @@ updates:
     schedule:
       interval: "weekly"
 
+=======
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+
+  - package-ecosystem: gomod
+    directory: /test
+    schedule:
+      interval: daily
+>>>>>>> origin/main

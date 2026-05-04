@@ -1,0 +1,92 @@
+name: CI (static checks)
+
+# Runs on every PR touching Terraform or workflow files.
+# Job dependency graph:
+#
+#   secret-scan ─┐
+#   fmt ─────────┼─→ validate
+#                ├─→ lint
+#                ├─→ security  (trivy)
+#                └─→ tfsec
+#
+# All jobs fail hard — no continue-on-error.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "infra/**"
+      - "envs/**"
+      - ".tflint.hcl"
+      - ".github/workflows/lint-security.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-static-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # ── 1. Secret scan ─────────────────────────────────────────────────────────
+  secret-scan:
+    name: Secret Scan
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-gitleaks.yml@v1.0.0
+    with:
+      working-directory: "."
+      scan-history: true
+      upload-sarif: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
+
+  fmt:
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-fmt.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    with:
+      working-directory: "."
+
+  # ── 3. Validate ─────────────────────────────────────────────────────────────
+  validate:
+    needs: [fmt]
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-validate.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    with:
+      chdir: "infra/stack"
+
+  # ── 4. Lint ─────────────────────────────────────────────────────────────────
+  lint:
+    needs: [fmt]
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-lint.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    with:
+      lint-path: "infra/"
+
+  # ── 5. Security (Trivy) ──────────────────────────────────────────────────────
+  security:
+    needs: [fmt]
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-security.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    with:
+      scan-ref: "infra/"
+
+  # ── 6. Security (tfsec) ──────────────────────────────────────────────────────
+  tfsec:
+    needs: [fmt]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: tfsec
+        uses: aquasecurity/tfsec-action@b466648d6e39e7c75324f25d83891162a721f2d6 # v1.0.3
+        with:
+          working_directory: "infra/"
+          additional_args: "--minimum-severity HIGH"
+          github_token: ${{ github.token }}
