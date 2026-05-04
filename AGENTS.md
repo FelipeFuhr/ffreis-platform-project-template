@@ -16,9 +16,6 @@ Fleet-wide policy (schedule, automerge, limits) is controlled in `platform/ffrei
 - **`src/data/site.contract.yaml` is the schema source of truth** for this template.
   Content repos validate against it. Do not remove or rename it.
 
-- **DynamoDB lock management** via `make lock-cleanup` and `make lock-info`. If a
-  Terraform apply is interrupted, locks may need manual cleanup before retrying.
-
 - **OIDC for credentials** — no static AWS keys in secrets. Temporary credentials
   only.
 

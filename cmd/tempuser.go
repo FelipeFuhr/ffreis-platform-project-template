@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -16,17 +18,25 @@ import (
 )
 
 const (
-	tempUserName   = "platform-bootstrap-temp"
-	tempPolicyName = "platform-bootstrap-temp-policy"
+	tempUserNamePrefix = "platform-bootstrap-temp"
+	tempPolicyName     = "platform-bootstrap-temp-policy"
 )
+
+// generateTempUserName returns a unique IAM username for a single invocation,
+// using a random 8-byte hex suffix to avoid collisions between concurrent runs.
+func generateTempUserName() (string, error) {
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("failed to generate random bytes for temp user name: %w", err)
+	}
+	return fmt.Sprintf("%s-%s", tempUserNamePrefix, hex.EncodeToString(b)), nil
+}
 
 // iamAPI is the minimal IAM surface needed for the temp-user bridge.
 type iamAPI interface {
-	GetUser(context.Context, *iam.GetUserInput, ...func(*iam.Options)) (*iam.GetUserOutput, error)
 	CreateUser(context.Context, *iam.CreateUserInput, ...func(*iam.Options)) (*iam.CreateUserOutput, error)
 	PutUserPolicy(context.Context, *iam.PutUserPolicyInput, ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error)
 	CreateAccessKey(context.Context, *iam.CreateAccessKeyInput, ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error)
-	ListAccessKeys(context.Context, *iam.ListAccessKeysInput, ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error)
 	DeleteAccessKey(context.Context, *iam.DeleteAccessKeyInput, ...func(*iam.Options)) (*iam.DeleteAccessKeyOutput, error)
 	DeleteUserPolicy(context.Context, *iam.DeleteUserPolicyInput, ...func(*iam.Options)) (*iam.DeleteUserPolicyOutput, error)
 	DeleteUser(context.Context, *iam.DeleteUserInput, ...func(*iam.Options)) (*iam.DeleteUserOutput, error)
@@ -150,57 +160,18 @@ func isIAMNoSuchEntity(err error) bool {
 	return errors.As(err, &nse)
 }
 
-func ensureTempUserExists(ctx context.Context, client iamAPI) error {
-	_, err := client.GetUser(ctx, &iam.GetUserInput{UserName: sdkaws.String(tempUserName)})
-	if err == nil {
-		return nil
-	}
-	if !isIAMNoSuchEntity(err) {
-		return fmt.Errorf("checking temp user: %w", err)
-	}
-	_, err = client.CreateUser(ctx, &iam.CreateUserInput{UserName: sdkaws.String(tempUserName)})
-	if err == nil {
-		return nil
-	}
-	var exists *iamtypes.EntityAlreadyExistsException
-	if errors.As(err, &exists) {
-		return nil
-	}
-	return fmt.Errorf("creating temp user: %w", err)
-}
-
-func deleteUserAccessKeys(ctx context.Context, client iamAPI, userName, deleteAction string) error {
-	keys, err := client.ListAccessKeys(ctx, &iam.ListAccessKeysInput{UserName: sdkaws.String(userName)})
-	if err != nil {
-		if isIAMNoSuchEntity(err) {
-			return nil
-		}
-		return fmt.Errorf("listing keys: %w", err)
-	}
-	for _, k := range keys.AccessKeyMetadata {
-		if _, err := client.DeleteAccessKey(ctx, &iam.DeleteAccessKeyInput{
-			UserName:    sdkaws.String(userName),
-			AccessKeyId: k.AccessKeyId,
-		}); err != nil {
-			if isIAMNoSuchEntity(err) {
-				continue
-			}
-			return fmt.Errorf("%s: %w", deleteAction, err)
-		}
-	}
-	return nil
-}
-
-// createTempUser creates (or reuses) the temp IAM user and returns fresh
-// credentials. Any existing access keys are deleted before creating a new one
-// to handle leftover keys from a previous partial run.
+// createTempUser creates a fresh IAM user with a unique name and returns
+// credentials scoped to assuming roleARN. Each call generates a distinct
+// username, so concurrent invocations cannot interfere with each other.
+// The caller is responsible for deleting the user via deleteTempUser.
 func createTempUser(ctx context.Context, client iamAPI, roleARN string) (tempUserData, error) {
-	if err := ensureTempUserExists(ctx, client); err != nil {
+	userName, err := generateTempUserName()
+	if err != nil {
 		return tempUserData{}, err
 	}
 
-	if err := deleteUserAccessKeys(ctx, client, tempUserName, "deleting orphaned key"); err != nil {
-		return tempUserData{}, err
+	if _, err := client.CreateUser(ctx, &iam.CreateUserInput{UserName: sdkaws.String(userName)}); err != nil {
+		return tempUserData{}, fmt.Errorf("creating temp user: %w", err)
 	}
 
 	policyDoc := fmt.Sprintf(
@@ -208,7 +179,7 @@ func createTempUser(ctx context.Context, client iamAPI, roleARN string) (tempUse
 		roleARN,
 	)
 	if _, err := client.PutUserPolicy(ctx, &iam.PutUserPolicyInput{
-		UserName:       sdkaws.String(tempUserName),
+		UserName:       sdkaws.String(userName),
 		PolicyName:     sdkaws.String(tempPolicyName),
 		PolicyDocument: sdkaws.String(policyDoc),
 	}); err != nil {
@@ -216,24 +187,28 @@ func createTempUser(ctx context.Context, client iamAPI, roleARN string) (tempUse
 	}
 
 	key, err := client.CreateAccessKey(ctx, &iam.CreateAccessKeyInput{
-		UserName: sdkaws.String(tempUserName),
+		UserName: sdkaws.String(userName),
 	})
 	if err != nil {
 		return tempUserData{}, fmt.Errorf("creating temp user access key: %w", err)
 	}
 
 	return tempUserData{
-		userName:        tempUserName,
+		userName:        userName,
 		accessKeyID:     sdkaws.ToString(key.AccessKey.AccessKeyId),
 		secretAccessKey: sdkaws.ToString(key.AccessKey.SecretAccessKey),
 	}, nil
 }
 
-// deleteTempUser removes all access keys, the inline policy, and the user.
-// Safe to call when any component is already absent.
+// deleteTempUser removes the access key, inline policy, and user created by
+// createTempUser. Safe to call when any component is already absent.
 func deleteTempUser(ctx context.Context, client iamAPI, u tempUserData) error {
-	if err := deleteUserAccessKeys(ctx, client, u.userName, "deleting access key"); err != nil {
-		return err
+	// Delete the access key we created (AWS requires all keys deleted before user deletion).
+	if _, err := client.DeleteAccessKey(ctx, &iam.DeleteAccessKeyInput{
+		UserName:    sdkaws.String(u.userName),
+		AccessKeyId: sdkaws.String(u.accessKeyID),
+	}); err != nil && !isIAMNoSuchEntity(err) {
+		return fmt.Errorf("deleting access key: %w", err)
 	}
 
 	if _, err := client.DeleteUserPolicy(ctx, &iam.DeleteUserPolicyInput{
