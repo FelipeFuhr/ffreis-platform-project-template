@@ -4,6 +4,9 @@
 template with site-data contract validation, quality checks, and GitHub Actions OIDC
 deployment workflows. Starting point for new website projects.
 
+**Standards:** `renovate.json` extends `github>FelipeFuhr/ffreis-platform-standards:renovate/terraform`.
+Fleet-wide policy (schedule, automerge, limits) is controlled in `platform/ffreis-platform-standards`.
+
 ## Non-obvious facts
 
 - **Compiler is configured via env/secrets, not hardcoded.** `WEBSITE_COMPILER`,
