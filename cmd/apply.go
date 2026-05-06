@@ -15,8 +15,7 @@ var applyCmd = &cobra.Command{
 	Short: "Provision all infrastructure for the given environment",
 	Long: `apply runs terraform apply, creating or updating all managed infrastructure.
 
-State is stored in the bootstrap-managed S3 bucket and locked via DynamoDB.
-Run 'make fetch ENV=<env>' before this command to pull the latest platform config.`,
+State is stored in the bootstrap-managed S3 bucket and locked via DynamoDB.`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
 		out := newCommandOutput(cmd, d.ui)
