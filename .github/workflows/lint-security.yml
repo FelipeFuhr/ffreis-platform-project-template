@@ -37,7 +37,7 @@ jobs:
       contents: read
       actions: read
       security-events: write
-    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-gitleaks.yml@v1.0.0
+    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-gitleaks.yml@01e2b12e992621fecf074b8a202f66044196f3bf # v1.0.4
     with:
       working-directory: "."
       scan-history: true
@@ -85,7 +85,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: tfsec
-        uses: aquasecurity/tfsec-action@b466648d6e39e7c75324f25d83891162a721f2d6 # v1.0.3
+        uses: aquasecurity/tfsec-action@b466648d6e39e7c75324f25d83891162a721f2d6 # v1.0.4
         with:
           working_directory: "infra/"
           additional_args: "--minimum-severity HIGH"
