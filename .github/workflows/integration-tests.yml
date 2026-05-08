@@ -36,7 +36,7 @@ permissions:
 concurrency:
   # Only one integration run at a time — they create real AWS resources.
   group: integration-tests
-  cancel-in-progress: false   # Don't cancel; a partial run may leave orphaned resources
+  cancel-in-progress: true   # Don't cancel; a partial run may leave orphaned resources
 
 env:
   GO_VERSION: "1.21"
@@ -45,6 +45,7 @@ env:
 
 jobs:
   terratest:
+    timeout-minutes: 30
     name: Terratest
     runs-on: ubuntu-latest
 

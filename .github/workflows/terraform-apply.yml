@@ -10,7 +10,7 @@ on:
 
 concurrency:
   group: terraform-apply-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   id-token: write   # Request OIDC JWT
@@ -20,6 +20,7 @@ permissions:
 jobs:
   # Determine which environments need updates based on changed files
   detect-changes:
+    timeout-minutes: 15
     if: vars.TERRAFORM_APPLY_ENABLED == 'true'
     runs-on: ubuntu-latest
     outputs:
@@ -49,6 +50,7 @@ jobs:
           }
 
   apply-staging:
+    timeout-minutes: 15
     needs: detect-changes
     if: vars.TERRAFORM_APPLY_ENABLED == 'true' && needs.detect-changes.outputs.staging == 'true'
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-apply.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
@@ -58,6 +60,7 @@ jobs:
     secrets: inherit
 
   apply-prod:
+    timeout-minutes: 15
     needs: [detect-changes, apply-staging]
     if: vars.TERRAFORM_APPLY_ENABLED == 'true' && needs.detect-changes.outputs.prod == 'true'
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-apply.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43

@@ -15,10 +15,11 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
+    timeout-minutes: 30
     name: Build and Deploy to S3 + CloudFront
     runs-on: ubuntu-latest
     environment: prod
