@@ -20,13 +20,11 @@ concurrency:
 
 jobs:
   fmt:
-    timeout-minutes: 15
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-fmt.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       working-directory: "."
 
   validate:
-    timeout-minutes: 15
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-validate.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     needs: [fmt]
     with:
@@ -35,14 +33,12 @@ jobs:
       modules-dir: "infra/modules"
 
   lint:
-    timeout-minutes: 15
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-lint.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     needs: [fmt]
     with:
       lint-path: "."
 
   trivy-config:
-    timeout-minutes: 30
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-security.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     needs: [fmt]
     with:
@@ -71,7 +67,6 @@ jobs:
           github_token: ${{ github.token }}
 
   checkov:
-    timeout-minutes: 15
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-checkov.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     needs: [fmt]
     with:
@@ -80,7 +75,6 @@ jobs:
       soft-fail: false
 
   semgrep:
-    timeout-minutes: 30
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-semgrep.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     needs: [fmt]
     with:

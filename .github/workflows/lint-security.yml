@@ -32,7 +32,6 @@ jobs:
 
   # ── 1. Secret scan ─────────────────────────────────────────────────────────
   secret-scan:
-    timeout-minutes: 30
     name: Secret Scan
     permissions:
       contents: read
@@ -45,14 +44,12 @@ jobs:
       upload-sarif: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
 
   fmt:
-    timeout-minutes: 30
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-fmt.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       working-directory: "."
 
   # ── 3. Validate ─────────────────────────────────────────────────────────────
   validate:
-    timeout-minutes: 30
     needs: [fmt]
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-validate.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
@@ -60,7 +57,6 @@ jobs:
 
   # ── 4. Lint ─────────────────────────────────────────────────────────────────
   lint:
-    timeout-minutes: 30
     needs: [fmt]
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-lint.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
@@ -68,7 +64,6 @@ jobs:
 
   # ── 5. Security (Trivy) ──────────────────────────────────────────────────────
   security:
-    timeout-minutes: 30
     needs: [fmt]
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-security.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
