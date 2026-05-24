@@ -25,6 +25,8 @@ jobs:
   checks:
     name: CI Checks (Lefthook)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       WEBSITE_COMPILER_REPO: ${{ vars.WEBSITE_COMPILER_REPO }}
     steps:

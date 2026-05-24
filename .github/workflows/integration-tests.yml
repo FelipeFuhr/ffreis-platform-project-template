@@ -29,10 +29,6 @@ on:
         required: false
         default: ""
 
-permissions:
-  id-token: write   # Required for OIDC → AWS credential exchange
-  contents: read
-
 concurrency:
   # Only one integration run at a time — they create real AWS resources.
   group: integration-tests
@@ -47,6 +43,9 @@ jobs:
   terratest:
     name: Terratest
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # Required for OIDC → AWS credential exchange
+      contents: read
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
