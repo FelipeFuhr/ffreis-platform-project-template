@@ -11,36 +11,42 @@ on:
       - "**/*.tf"
       - ".github/workflows/**"
 
-permissions:
-  contents: read
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   fmt:
+    permissions:
+      contents: read
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-fmt.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       working-directory: "."
 
   validate:
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-validate.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     needs: [fmt]
+    permissions:
+      contents: read
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-validate.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       chdir: "infra/stack"
       validate-all-modules: true
       modules-dir: "infra/modules"
 
   lint:
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-lint.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     needs: [fmt]
+    permissions:
+      contents: read
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-lint.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       lint-path: "."
 
   trivy-config:
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-security.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     needs: [fmt]
+    permissions:
+      contents: read
+      security-events: write
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-security.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       scan-ref: "."
 
@@ -66,16 +72,22 @@ jobs:
           github_token: ${{ github.token }}
 
   checkov:
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-checkov.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     needs: [fmt]
+    permissions:
+      contents: read
+      security-events: write
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-checkov.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       scan-directory: "."
       framework: "terraform"
       soft-fail: false
 
   semgrep:
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-semgrep.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     needs: [fmt]
+    permissions:
+      contents: read
+      security-events: write
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-semgrep.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       working-directory: "."
       config: "p/terraform"

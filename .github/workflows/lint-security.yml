@@ -21,9 +21,6 @@ on:
       - ".tflint.hcl"
       - ".github/workflows/lint-security.yml"
 
-permissions:
-  contents: read
-
 concurrency:
   group: ci-static-${{ github.ref }}
   cancel-in-progress: true
@@ -44,6 +41,8 @@ jobs:
       upload-sarif: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
 
   fmt:
+    permissions:
+      contents: read
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-fmt.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       working-directory: "."
@@ -51,6 +50,8 @@ jobs:
   # ── 3. Validate ─────────────────────────────────────────────────────────────
   validate:
     needs: [fmt]
+    permissions:
+      contents: read
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-validate.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       chdir: "infra/stack"
@@ -58,6 +59,8 @@ jobs:
   # ── 4. Lint ─────────────────────────────────────────────────────────────────
   lint:
     needs: [fmt]
+    permissions:
+      contents: read
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-lint.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       lint-path: "infra/"
@@ -65,6 +68,9 @@ jobs:
   # ── 5. Security (Trivy) ──────────────────────────────────────────────────────
   security:
     needs: [fmt]
+    permissions:
+      contents: read
+      security-events: write
     uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-security.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
     with:
       scan-ref: "infra/"
