@@ -49,17 +49,18 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
-      - name: Upload static site to S3
+      - name: Sync to S3 and invalidate CloudFront
         env:
           S3_BUCKET: ${{ secrets.S3_WEBSITE_BUCKET }}
-        run: |
-          set -euo pipefail
-          aws s3 sync dist/ "s3://$S3_BUCKET" --delete
-      - name: Invalidate CloudFront cache
-        env:
           CF_DISTRIBUTION_ID: ${{ secrets.CF_DISTRIBUTION_ID }}
         run: |
           set -euo pipefail
-          aws cloudfront create-invalidation \
-            --distribution-id "$CF_DISTRIBUTION_ID" \
-            --paths '/*'
+          args=(
+            --bucket "$S3_BUCKET"
+            --prefix /
+            --dir dist
+          )
+          if [[ -n "${CF_DISTRIBUTION_ID:-}" ]]; then
+            args+=(--cloudfront-id "$CF_DISTRIBUTION_ID")
+          fi
+          go run github.com/felipefuhr/ffreis-website-packer/cmd/website-packer@latest "${args[@]}"
