@@ -125,3 +125,15 @@ lefthook-run: lefthook-bootstrap ## Run all CI checks locally
 	LEFTHOOK="$(LEFTHOOK_BIN)" "$(LEFTHOOK_BIN)" run ci
 
 lefthook: lefthook-bootstrap lefthook-install lefthook-run ## Install hooks and run them
+
+install-act: ## Download pinned act binary into .bin/
+	@mkdir -p scripts
+	@curl -fsSL "$(PLATFORM_STANDARDS_RAW)/$(PLATFORM_STANDARDS_SHA)/scripts/install_act.sh" \
+		-o scripts/install_act.sh && chmod +x scripts/install_act.sh
+	@bash ./scripts/install_act.sh
+
+ci-local: ## Run workflows locally via act (GH Actions quota fallback). Args via ARGS=...
+	@mkdir -p scripts
+	@curl -fsSL "$(PLATFORM_STANDARDS_RAW)/$(PLATFORM_STANDARDS_SHA)/scripts/run-ci-local.sh" \
+		-o scripts/run-ci-local.sh && chmod +x scripts/run-ci-local.sh
+	@PATH="$(CURDIR)/.bin:$(PATH)" bash ./scripts/run-ci-local.sh $(ARGS)
