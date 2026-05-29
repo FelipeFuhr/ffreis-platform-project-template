@@ -34,7 +34,7 @@ jobs:
         with:
           repository: ${{ vars.WEBSITE_COMPILER_REPO }}
           path: website-compiler
-          token: ${{ secrets.CI_REPO_READ_TOKEN || github.token }}
+          token: ${{ secrets.FLEET_READ_TOKEN || github.token }}
       - uses: actions/setup-go@v6
         with:
           go-version: '1.24'
