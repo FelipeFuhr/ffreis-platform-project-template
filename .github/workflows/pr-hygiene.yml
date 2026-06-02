@@ -11,6 +11,7 @@ concurrency:
 jobs:
   semantic-pr:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       pull-requests: read
     steps:
@@ -20,6 +21,7 @@ jobs:
 
   actionlint:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:

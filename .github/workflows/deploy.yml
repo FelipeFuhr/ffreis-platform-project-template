@@ -9,10 +9,16 @@ on:
       - 'src/templates/**'
       - 'sitemap.yaml'
 
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     name: Build and Deploy to S3 + CloudFront
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: prod
     permissions:
       id-token: write
