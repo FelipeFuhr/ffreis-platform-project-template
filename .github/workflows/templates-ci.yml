@@ -2,6 +2,7 @@ name: Templates CI
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'src/assets/**'
       - 'src/data/**'
@@ -28,6 +29,7 @@ concurrency:
 
 jobs:
   checks:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: CI Checks (Lefthook)
     runs-on: ubuntu-latest
     timeout-minutes: 30
