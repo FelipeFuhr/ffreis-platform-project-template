@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [main]
   schedule:
     - cron: "51 8 6 * *"  # monthly scattered (was: 37 15 * * 3)
