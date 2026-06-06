@@ -1,6 +1,6 @@
 module github.com/ffreis/platform-project-template
 
-go 1.24
+go 1.25.8
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.5
