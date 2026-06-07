@@ -17,6 +17,7 @@ jobs:
   detect-changes:
     if: vars.TERRAFORM_APPLY_ENABLED == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     outputs:
