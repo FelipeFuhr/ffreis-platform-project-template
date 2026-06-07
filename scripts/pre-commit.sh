@@ -6,7 +6,7 @@ set -e
 # Find all terraform files
 tf_files=$(find . -name "*.tf" -not -path "./.terraform/*" -type f)
 
-if [ -z "$tf_files" ]; then
+if [[ -z "$tf_files" ]]; then
   echo "No terraform files found"
   exit 0
 fi
