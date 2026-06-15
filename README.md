@@ -1,5 +1,9 @@
 # Website Project Template
 
+<!-- ffreis-badges:start -->
+[![CI](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/FelipeFuhr/ffreis-badges/main/badges/ffreis-platform-project-template/ci.json)](https://github.com/FelipeFuhr/ffreis-platform-project-template/actions) [![License](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/FelipeFuhr/ffreis-badges/main/badges/ffreis-platform-project-template/license.json)](https://github.com/FelipeFuhr/ffreis-platform-project-template/blob/main/LICENSE)
+<!-- ffreis-badges:end -->
+
 This repository is being repositioned into a public-safe website project template.
 
 The target shape is intentionally close to the Flemming website delivery model:
