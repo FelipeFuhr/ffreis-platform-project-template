@@ -20,7 +20,7 @@ jobs:
   fmt:
     permissions:
       contents: read
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-fmt.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-fmt.yml@5606584d4d99f3f0886517c4e637aa0b19308898 # v1.1.3
     with:
       working-directory: "."
 
@@ -28,7 +28,7 @@ jobs:
     needs: [fmt]
     permissions:
       contents: read
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-validate.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-validate.yml@5606584d4d99f3f0886517c4e637aa0b19308898 # v1.1.3
     with:
       chdir: "infra/stack"
       validate-all-modules: true
@@ -38,7 +38,7 @@ jobs:
     needs: [fmt]
     permissions:
       contents: read
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-lint.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-lint.yml@5606584d4d99f3f0886517c4e637aa0b19308898 # v1.1.3
     with:
       lint-path: "."
 
@@ -46,8 +46,11 @@ jobs:
     needs: [fmt]
     permissions:
       contents: read
+      # scan-fix(startup_failure): callee tf-security.yml also requires
+      # actions: read.
+      actions: read
       security-events: write
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-security.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-security.yml@5606584d4d99f3f0886517c4e637aa0b19308898 # v1.1.3
     with:
       scan-ref: "."
 
@@ -79,7 +82,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-checkov.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-checkov.yml@5606584d4d99f3f0886517c4e637aa0b19308898 # v1.1.3
     with:
       scan-directory: "."
       framework: "terraform"
@@ -90,7 +93,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-semgrep.yml@e0cd54322d52fe7c522dd0bc2c46d56df2ceae43
+    uses: FelipeFuhr/ffreis-workflows-terraform/.github/workflows/tf-semgrep.yml@5606584d4d99f3f0886517c4e637aa0b19308898 # v1.1.3
     with:
       working-directory: "."
       config: "p/terraform"
