@@ -13,7 +13,7 @@ navigation:
 hero:
   eyebrow: Contract-driven static website
   title: Launch a generic content site without private infrastructure coupling.
-  description: This template mirrors the Flemming website structure while keeping private infrastructure adapters outside the public repository.
+  description: This template mirrors a typical production website structure while keeping private infrastructure adapters outside the public repository.
   primary_cta:
     label: Get Started
     href: /#start

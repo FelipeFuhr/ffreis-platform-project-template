@@ -6,7 +6,7 @@
 
 This repository is being repositioned into a public-safe website project template.
 
-The target shape is intentionally close to the Flemming website delivery model:
+The target shape is intentionally close to a reference production website's delivery model:
 
 - a website source tree under `src/`
 - contract-based site data under `src/data/`
@@ -73,7 +73,7 @@ The compiler path is configured through:
 - `WEBSITE_COMPILER_CLI`
 - `WEBSITE_COMPILER_REPO` in GitHub repository variables for CI
 
-That keeps the template generic while preserving the Flemming-style contract/build flow.
+That keeps the template generic while preserving a typical production contract/build flow.
 
 ## Local Usage
 
@@ -121,7 +121,7 @@ Recommended contract:
 
 ## Related Repos
 
-- Flemming website repo shape is the reference for this template
+- A real production site's repo shape is the reference for this template
 - The ffreis website should later converge on the same public-safe structure
 
 ## Next Migration Steps
